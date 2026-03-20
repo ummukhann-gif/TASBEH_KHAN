@@ -39,23 +39,29 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            ),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
-              blurRadius: 26,
-              offset: const Offset(0, 12),
+              color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           child: NavigationBar(
             selectedIndex: _currentIndex,
             onDestinationSelected: _selectIndex,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            backgroundColor: Colors.transparent,
             destinations: const [
               NavigationDestination(
                 icon: Icon(Symbols.fingerprint),

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../app_state.dart';
-import '../theme.dart';
+import 'liquid_button.dart';
 
 class CounterScreen extends StatefulWidget {
   const CounterScreen({super.key});
@@ -29,11 +29,15 @@ class _CounterScreenState extends State<CounterScreen> {
           children: [
             Text(
               'Terra Tasbih',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             Text(
               'Mindful dhikr, one focused session at a time',
-              style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -79,18 +83,27 @@ class _CounterScreenState extends State<CounterScreen> {
                         _ActionChipButton(
                           icon: Symbols.restart_alt,
                           label: 'Reset',
-                          onTap: app.currentCount == 0 ? null : app.resetCurrentSession,
+                          onTap: app.currentCount == 0
+                              ? null
+                              : app.resetCurrentSession,
                         ),
                         _ActionChipButton(
-                          icon: app.soundEnabled ? Symbols.volume_up : Symbols.volume_off,
+                          icon: app.soundEnabled
+                              ? Symbols.volume_up
+                              : Symbols.volume_off,
                           label: app.soundEnabled ? 'Sound On' : 'Sound Off',
                           onTap: () => app.setSoundEnabled(!app.soundEnabled),
                           highlighted: app.soundEnabled,
                         ),
                         _ActionChipButton(
-                          icon: app.hapticsEnabled ? Symbols.vibration : Symbols.block,
-                          label: app.hapticsEnabled ? 'Haptics On' : 'Haptics Off',
-                          onTap: () => app.setHapticsEnabled(!app.hapticsEnabled),
+                          icon: app.hapticsEnabled
+                              ? Symbols.vibration
+                              : Symbols.block,
+                          label: app.hapticsEnabled
+                              ? 'Haptics On'
+                              : 'Haptics Off',
+                          onTap: () =>
+                              app.setHapticsEnabled(!app.hapticsEnabled),
                           highlighted: app.hapticsEnabled,
                         ),
                       ],
@@ -101,7 +114,9 @@ class _CounterScreenState extends State<CounterScreen> {
                     if (app.recentSessions.isNotEmpty) ...[
                       Text(
                         'Recent sessions',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       ...app.recentSessions.take(3).map((session) {
@@ -140,13 +155,18 @@ class _CounterScreenState extends State<CounterScreen> {
     if (!wasReached && app.isGoalReached && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${app.currentDhikr.title} completed at ${app.currentTarget} counts.'),
+          content: Text(
+            '${app.currentDhikr.title} completed at ${app.currentTarget} counts.',
+          ),
         ),
       );
     }
   }
 
-  Future<void> _showDhikrPicker(BuildContext context, TasbihAppState app) async {
+  Future<void> _showDhikrPicker(
+    BuildContext context,
+    TasbihAppState app,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -167,18 +187,36 @@ class _CounterScreenState extends State<CounterScreen> {
                   : theme.colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(20),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
                 leading: CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                  backgroundColor: theme.colorScheme.primary.withValues(
+                    alpha: 0.12,
+                  ),
                   foregroundColor: theme.colorScheme.primary,
                   child: Icon(dhikr.icon),
                 ),
-                title: Text(dhikr.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                title: Text(
+                  dhikr.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 subtitle: Text(
                   '${dhikr.category} • ${dhikr.suggestedTarget} reps',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                trailing: selected ? Icon(Symbols.check_circle, color: theme.colorScheme.primary, fill: 1) : null,
+                trailing: selected
+                    ? Icon(
+                        Symbols.check_circle,
+                        color: theme.colorScheme.primary,
+                        fill: 1,
+                      )
+                    : null,
                 onTap: () {
                   app.selectDhikr(dhikr.id);
                   Navigator.of(context).pop();
@@ -211,10 +249,7 @@ class _CounterScreenState extends State<CounterScreen> {
 }
 
 class _CurrentDhikrCard extends StatelessWidget {
-  const _CurrentDhikrCard({
-    required this.app,
-    required this.onChange,
-  });
+  const _CurrentDhikrCard({required this.app, required this.onChange});
 
   final TasbihAppState app;
   final VoidCallback onChange;
@@ -237,7 +272,9 @@ class _CurrentDhikrCard extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.18),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +305,9 @@ class _CurrentDhikrCard extends StatelessWidget {
                     ),
                     Text(
                       app.currentDhikr.title,
-                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ],
                 ),
@@ -293,15 +332,23 @@ class _CurrentDhikrCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             app.currentDhikr.translation,
-            style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
-              _InfoPill(icon: Symbols.target, label: 'Goal ${app.currentTarget}'),
-              _InfoPill(icon: Symbols.local_fire_department, label: '${app.activeStreak} day streak'),
+              _InfoPill(
+                icon: Symbols.target,
+                label: 'Goal ${app.currentTarget}',
+              ),
+              _InfoPill(
+                icon: Symbols.local_fire_department,
+                label: '${app.activeStreak} day streak',
+              ),
               _InfoPill(icon: Symbols.today, label: '${app.todayCount} today'),
             ],
           ),
@@ -356,83 +403,12 @@ class _CounterDial extends StatelessWidget {
               },
             ),
           ),
-          AnimatedScale(
-            scale: isPressed ? 0.965 : 1,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            child: GestureDetector(
-              onTap: onTap,
-              child: Container(
-                width: innerSize,
-                height: innerSize,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      scheme.primary,
-                      AppTheme.primaryContainer,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(innerSize * 0.26),
-                  boxShadow: [
-                    BoxShadow(
-                      color: scheme.primary.withValues(alpha: 0.26),
-                      blurRadius: 30,
-                      offset: const Offset(0, 14),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(innerSize * 0.26),
-                    onTap: onTap,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Symbols.touch_app, color: scheme.onPrimary, size: innerSize * 0.18, fill: 1),
-                          const SizedBox(height: 12),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            transitionBuilder: (child, animation) {
-                              return ScaleTransition(scale: animation, child: child);
-                            },
-                            child: Text(
-                              '$count',
-                              key: ValueKey(count),
-                              style: theme.textTheme.displayLarge?.copyWith(
-                                color: scheme.onPrimary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: innerSize * 0.22,
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap to count',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: scheme.onPrimary.withValues(alpha: 0.84),
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '$count / $target',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: scheme.onPrimary.withValues(alpha: 0.78),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          LiquidButton(
+            innerSize: innerSize,
+            count: count,
+            target: target,
+            onTap: onTap,
+            isPressed: isPressed,
           ),
         ],
       ),
@@ -452,15 +428,17 @@ class _InsightCard extends StatelessWidget {
     final message = app.isGoalReached
         ? 'Session completed. Your progress has been saved to stats.'
         : app.currentCount == 0
-            ? 'Start tapping to begin a focused session.'
-            : '${app.currentTarget - app.currentCount} counts left to complete this round.';
+        ? 'Start tapping to begin a focused session.'
+        : '${app.currentTarget - app.currentCount} counts left to complete this round.';
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.18),
+        ),
       ),
       child: Row(
         children: [
@@ -484,12 +462,16 @@ class _InsightCard extends StatelessWidget {
               children: [
                 Text(
                   app.isGoalReached ? 'Goal reached' : 'Session insight',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -521,7 +503,9 @@ class _RecentSessionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.18),
+        ),
       ),
       child: Row(
         children: [
@@ -539,10 +523,17 @@ class _RecentSessionTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 Text(
                   subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -589,18 +580,25 @@ class _ActionChipButton extends StatelessWidget {
               : scheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: (highlighted ? scheme.primary : scheme.outlineVariant).withValues(alpha: 0.22),
+            color: (highlighted ? scheme.primary : scheme.outlineVariant)
+                .withValues(alpha: 0.22),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: highlighted ? scheme.primary : scheme.onSurfaceVariant),
+            Icon(
+              icon,
+              size: 18,
+              color: highlighted ? scheme.primary : scheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
               style: theme.textTheme.labelLarge?.copyWith(
-                color: onTap == null ? scheme.onSurfaceVariant.withValues(alpha: 0.5) : null,
+                color: onTap == null
+                    ? scheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : null,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -612,10 +610,7 @@ class _ActionChipButton extends StatelessWidget {
 }
 
 class _InfoPill extends StatelessWidget {
-  const _InfoPill({
-    required this.icon,
-    required this.label,
-  });
+  const _InfoPill({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -637,7 +632,9 @@ class _InfoPill extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
