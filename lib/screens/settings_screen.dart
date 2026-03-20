@@ -20,17 +20,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Symbols.menu),
-          onPressed: () {},
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('Terra Tasbih', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Symbols.history),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
