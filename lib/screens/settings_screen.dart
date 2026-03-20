@@ -1,398 +1,415 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../theme.dart';
 
-class SettingsScreen extends StatefulWidget {
+import '../app_state.dart';
+
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  int _targetCount = 33;
-  bool _hapticEnabled = true;
-  bool _soundEnabled = false;
-  bool _darkModeEnabled = false;
-  double _intensity = 0.8;
-
-  @override
   Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Terra Tasbih', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Settings',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'Tune goals, feedback, and visual comfort',
+              style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        children: [
-          const SizedBox(height: 16),
-          // Header Section
-          Text(
-            'Settings',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: AppTheme.onSurface,
-                  fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final contentWidth = math.min(constraints.maxWidth, 640.0);
+            return Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: contentWidth,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 128),
+                  children: [
+                    _SectionCard(
+                      title: 'Session goal',
+                      subtitle: 'Choose how targets are applied for every round.',
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _GoalChip(
+                            label: 'Auto',
+                            selected: app.goalPreset == 0,
+                            onTap: () => app.setGoalPreset(0),
+                          ),
+                          _GoalChip(
+                            label: '33',
+                            selected: app.goalPreset == 33,
+                            onTap: () => app.setGoalPreset(33),
+                          ),
+                          _GoalChip(
+                            label: '99',
+                            selected: app.goalPreset == 99,
+                            onTap: () => app.setGoalPreset(99),
+                          ),
+                          _GoalChip(
+                            label: '100',
+                            selected: app.goalPreset == 100,
+                            onTap: () => app.setGoalPreset(100),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _SectionCard(
+                      title: 'Feedback',
+                      subtitle: 'Keep tapping responsive without becoming distracting.',
+                      child: Column(
+                        children: [
+                          _SettingSwitchTile(
+                            icon: app.hapticsEnabled ? Symbols.vibration : Symbols.block,
+                            title: 'Haptics',
+                            subtitle: 'Physical feedback on every tap',
+                            value: app.hapticsEnabled,
+                            onChanged: app.setHapticsEnabled,
+                          ),
+                          const SizedBox(height: 14),
+                          _SettingSwitchTile(
+                            icon: app.soundEnabled ? Symbols.volume_up : Symbols.volume_off,
+                            title: 'Sound',
+                            subtitle: 'Soft system click while counting',
+                            value: app.soundEnabled,
+                            onChanged: app.setSoundEnabled,
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Intensity',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              Text(
+                                '${(app.intensity * 100).round()}%',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Slider(
+                            value: app.intensity,
+                            onChanged: app.setIntensity,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _SectionCard(
+                      title: 'Appearance',
+                      subtitle: 'Keep the interface comfortable on bright or dim screens.',
+                      child: Column(
+                        children: [
+                          _SettingSwitchTile(
+                            icon: app.darkModeEnabled ? Symbols.dark_mode : Symbols.light_mode,
+                            title: 'Dark mode',
+                            subtitle: 'Switch theme across the entire app',
+                            value: app.darkModeEnabled,
+                            onChanged: app.setDarkModeEnabled,
+                          ),
+                          const SizedBox(height: 16),
+                          _ThemePreviewCard(darkModeEnabled: app.darkModeEnabled),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _SectionCard(
+                      title: 'Data',
+                      subtitle: 'Remove stats, sessions, and active progress when needed.',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            '${app.completedSessions} sessions saved • ${app.totalCount} total counts',
+                            style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton.tonalIcon(
+                            onPressed: () => _confirmReset(context, app),
+                            icon: Icon(Symbols.delete_forever, color: scheme.error),
+                            label: Text(
+                              'Reset all progress',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: scheme.error,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: scheme.error.withValues(alpha: 0.10),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tailor your spiritual practice',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-          ),
-          const SizedBox(height: 32),
-          // Bento Grid Settings
-          _buildTargetCountSection(context),
-          const SizedBox(height: 16),
-          _buildToggleSetting(
-            context,
-            icon: Symbols.vibration,
-            title: 'Haptic',
-            subtitle: 'Vibrate on count',
-            value: _hapticEnabled,
-            onChanged: (val) => setState(() => _hapticEnabled = val),
-            iconColor: AppTheme.primary,
-            iconBgColor: AppTheme.primaryContainer.withOpacity(0.2),
-          ),
-          const SizedBox(height: 16),
-          _buildToggleSetting(
-            context,
-            icon: Symbols.volume_up,
-            title: 'Sound',
-            subtitle: 'Audible feedback',
-            value: _soundEnabled,
-            onChanged: (val) => setState(() => _soundEnabled = val),
-            iconColor: AppTheme.tertiary,
-            iconBgColor: AppTheme.tertiaryContainer.withOpacity(0.2),
-          ),
-          const SizedBox(height: 16),
-          _buildAppearanceSection(context),
-          const SizedBox(height: 16),
-          // Reset Button
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: AppTheme.error.withOpacity(0.2),
-                width: 2,
-                strokeAlign: BorderSide.strokeAlignInside,
               ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Symbols.restart_alt, color: AppTheme.error),
-                const SizedBox(width: 8),
-                Text(
-                  'Reset All Session Progress',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.error,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 48),
-          // Footer
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  'Terra Tasbih v2.4.0',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.onSurfaceVariant.withOpacity(0.5),
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                Text(
-                  'Crafted for Mindful Presence',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.onSurfaceVariant.withOpacity(0.5),
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 120), // padding for bottom nav
-        ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildTargetCountSection(BuildContext context) {
+  Future<void> _confirmReset(BuildContext context, TasbihAppState app) async {
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Reset all progress?'),
+          content: const Text(
+            'This removes saved sessions, streaks, and the current counter state.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Reset'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (approved == true && context.mounted) {
+      app.resetAllProgress();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All progress has been reset.')),
+      );
+    }
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Symbols.adjust, color: AppTheme.primary),
-              const SizedBox(width: 12),
-              Text(
-                'Target Count',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
+          Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(child: _buildTargetButton(33, '33')),
-              const SizedBox(width: 12),
-              Expanded(child: _buildTargetButton(99, '99')),
-              const SizedBox(width: 12),
-              Expanded(child: _buildTargetButton(-1, '', icon: Symbols.all_inclusive)),
-            ],
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
+          const SizedBox(height: 18),
+          child,
         ],
       ),
     );
   }
+}
 
-  Widget _buildTargetButton(int value, String label, {IconData? icon}) {
-    final isSelected = _targetCount == value;
-    return GestureDetector(
-      onTap: () => setState(() => _targetCount = value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+class _GoalChip extends StatelessWidget {
+  const _GoalChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary : AppTheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? scheme.primary.withValues(alpha: 0.14) : scheme.surface,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? Colors.transparent : AppTheme.outlineVariant.withOpacity(0.3),
+            color: selected ? scheme.primary.withValues(alpha: 0.30) : scheme.outlineVariant.withValues(alpha: 0.22),
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
-        child: Center(
-          child: icon != null
-              ? Icon(
-                  icon,
-                  color: isSelected ? AppTheme.onPrimary : AppTheme.primary,
-                )
-              : Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: isSelected ? AppTheme.onPrimary : AppTheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
+        child: Text(
+          label,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: selected ? scheme.primary : scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildToggleSetting(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required Color iconColor,
-    required Color iconBgColor,
-  }) {
+class _SettingSwitchTile extends StatelessWidget {
+  const _SettingSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  shape: BoxShape.circle,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: scheme.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                 ),
-                child: Icon(icon, color: iconColor),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppTheme.primary,
-            inactiveTrackColor: AppTheme.surfaceContainerHighest,
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildAppearanceSection(BuildContext context) {
+class _ThemePreviewCard extends StatelessWidget {
+  const _ThemePreviewCard({
+    required this.darkModeEnabled,
+  });
+
+  final bool darkModeEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.secondaryContainer.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Symbols.dark_mode, color: AppTheme.secondary),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Dark Mode',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppTheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      Text(
-                        'Gentle on the eyes',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                  ),
+        gradient: LinearGradient(
+          colors: darkModeEnabled
+              ? [
+                  const Color(0xFF1A201D),
+                  const Color(0xFF24312A),
+                ]
+              : [
+                  scheme.primary.withValues(alpha: 0.16),
+                  scheme.tertiary.withValues(alpha: 0.10),
                 ],
-              ),
-              Switch(
-                value: _darkModeEnabled,
-                onChanged: (val) => setState(() => _darkModeEnabled = val),
-                activeColor: AppTheme.primary,
-                inactiveTrackColor: AppTheme.surfaceContainerHighest,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Intensity',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-              Text(
-                '${(_intensity * 100).toInt()}%',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Custom Slider Slider Pattern
-          SizedBox(
-            height: 48,
-            child: Stack(
-              alignment: Alignment.center,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16.0),
-                        child: Icon(Symbols.light_mode, color: AppTheme.primary.withOpacity(0.2), size: 16),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: Icon(Symbols.light_mode, color: AppTheme.primary.withOpacity(0.2)),
-                      ),
-                    ],
+                Text(
+                  darkModeEnabled ? 'Night focus mode' : 'Soft daylight mode',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: darkModeEnabled ? Colors.white : null,
                   ),
                 ),
-                Positioned(
-                  left: 0,
-                  child: Container(
-                    width: MediaQuery.of(context).size.width * 0.8 * _intensity, // Approx sizing for demo
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.2),
-                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
-                    ),
-                  ),
-                ),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 48,
-                    activeTrackColor: Colors.transparent,
-                    inactiveTrackColor: Colors.transparent,
-                    thumbColor: AppTheme.primary,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 16, elevation: 2),
-                    overlayColor: AppTheme.primary.withOpacity(0.1),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
-                  ),
-                  child: Slider(
-                    value: _intensity,
-                    onChanged: (val) => setState(() => _intensity = val),
+                const SizedBox(height: 6),
+                Text(
+                  darkModeEnabled
+                      ? 'Muted contrast for long evening sessions.'
+                      : 'Warm contrast for comfortable daytime reading.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: darkModeEnabled ? Colors.white70 : scheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(width: 16),
+          Icon(
+            darkModeEnabled ? Symbols.dark_mode : Symbols.sunny,
+            size: 42,
+            color: darkModeEnabled ? Colors.white : scheme.primary,
           ),
         ],
       ),

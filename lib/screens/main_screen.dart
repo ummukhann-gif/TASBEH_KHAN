@@ -15,64 +15,66 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    CounterScreen(),
-    DhikrScreen(),
-    StatsScreen(),
-    SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final screens = <Widget>[
+      const CounterScreen(),
+      DhikrScreen(onOpenCounter: () => _selectIndex(0)),
+      StatsScreen(
+        onOpenCounter: () => _selectIndex(0),
+        onOpenDhikr: () => _selectIndex(1),
+      ),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
-      extendBody: true, // Allow content to flow behind bottom nav
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      extendBody: true,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: screens[_currentIndex],
+        ),
       ),
       bottomNavigationBar: Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF2E3230).withOpacity(0.06),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
+              color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
+              blurRadius: 26,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.circular(28),
           child: NavigationBar(
             selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            backgroundColor: const Color(0xFFfaf6f0).withOpacity(0.95),
-            indicatorColor: const Color(0xFF4a7c59).withOpacity(0.1),
-            elevation: 0,
+            onDestinationSelected: _selectIndex,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             destinations: const [
               NavigationDestination(
-                icon: Icon(Symbols.fingerprint, color: Color(0x99705c30)),
-                selectedIcon: Icon(Symbols.fingerprint, color: Color(0xFF4a7c59), fill: 1),
+                icon: Icon(Symbols.fingerprint),
+                selectedIcon: Icon(Symbols.fingerprint, fill: 1),
                 label: 'Counter',
               ),
               NavigationDestination(
-                icon: Icon(Symbols.format_list_bulleted, color: Color(0x99705c30)),
-                selectedIcon: Icon(Symbols.format_list_bulleted, color: Color(0xFF4a7c59), fill: 1),
+                icon: Icon(Symbols.format_list_bulleted),
+                selectedIcon: Icon(Symbols.format_list_bulleted, fill: 1),
                 label: 'Dhikr',
               ),
               NavigationDestination(
-                icon: Icon(Symbols.bar_chart, color: Color(0x99705c30)),
-                selectedIcon: Icon(Symbols.bar_chart, color: Color(0xFF4a7c59), fill: 1),
+                icon: Icon(Symbols.bar_chart),
+                selectedIcon: Icon(Symbols.bar_chart, fill: 1),
                 label: 'Stats',
               ),
               NavigationDestination(
-                icon: Icon(Symbols.settings, color: Color(0x99705c30)),
-                selectedIcon: Icon(Symbols.settings, color: Color(0xFF4a7c59), fill: 1),
+                icon: Icon(Symbols.settings),
+                selectedIcon: Icon(Symbols.settings, fill: 1),
                 label: 'Settings',
               ),
             ],
@@ -80,5 +82,14 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
     );
+  }
+
+  void _selectIndex(int index) {
+    if (_currentIndex == index) {
+      return;
+    }
+    setState(() {
+      _currentIndex = index;
+    });
   }
 }
