@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 enum AppPalette {
   terra('Terra'),
@@ -45,76 +44,76 @@ class AppTheme {
       useMaterial3: true,
     ).textTheme;
 
-    final textTheme = GoogleFonts.nunitoSansTextTheme(baseText).copyWith(
-      displayLarge: GoogleFonts.literata(
-        textStyle: baseText.displayLarge,
+    final textTheme = baseText.copyWith(
+      displayLarge: baseText.displayLarge?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w800,
         color: scheme.onSurface,
       ),
-      displayMedium: GoogleFonts.literata(
-        textStyle: baseText.displayMedium,
+      displayMedium: baseText.displayMedium?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w800,
         color: scheme.onSurface,
       ),
-      displaySmall: GoogleFonts.literata(
-        textStyle: baseText.displaySmall,
+      displaySmall: baseText.displaySmall?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      headlineLarge: GoogleFonts.literata(
-        textStyle: baseText.headlineLarge,
+      headlineLarge: baseText.headlineLarge?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      headlineMedium: GoogleFonts.literata(
-        textStyle: baseText.headlineMedium,
+      headlineMedium: baseText.headlineMedium?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      headlineSmall: GoogleFonts.literata(
-        textStyle: baseText.headlineSmall,
+      headlineSmall: baseText.headlineSmall?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      titleLarge: GoogleFonts.literata(
-        textStyle: baseText.titleLarge,
+      titleLarge: baseText.titleLarge?.copyWith(
+        fontFamily: 'Literata',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      titleMedium: GoogleFonts.nunitoSans(
-        textStyle: baseText.titleMedium,
+      titleMedium: baseText.titleMedium?.copyWith(
+        fontFamily: 'NunitoSans',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      titleSmall: GoogleFonts.nunitoSans(
-        textStyle: baseText.titleSmall,
+      titleSmall: baseText.titleSmall?.copyWith(
+        fontFamily: 'NunitoSans',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      bodyLarge: GoogleFonts.nunitoSans(
-        textStyle: baseText.bodyLarge,
+      bodyLarge: baseText.bodyLarge?.copyWith(
+        fontFamily: 'NunitoSans',
         color: scheme.onSurface,
       ),
-      bodyMedium: GoogleFonts.nunitoSans(
-        textStyle: baseText.bodyMedium,
+      bodyMedium: baseText.bodyMedium?.copyWith(
+        fontFamily: 'NunitoSans',
         color: scheme.onSurface,
       ),
-      bodySmall: GoogleFonts.nunitoSans(
-        textStyle: baseText.bodySmall,
+      bodySmall: baseText.bodySmall?.copyWith(
+        fontFamily: 'NunitoSans',
         color: scheme.onSurfaceVariant,
       ),
-      labelLarge: GoogleFonts.nunitoSans(
-        textStyle: baseText.labelLarge,
+      labelLarge: baseText.labelLarge?.copyWith(
+        fontFamily: 'NunitoSans',
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      labelMedium: GoogleFonts.nunitoSans(
-        textStyle: baseText.labelMedium,
+      labelMedium: baseText.labelMedium?.copyWith(
+        fontFamily: 'NunitoSans',
         fontWeight: FontWeight.w700,
         color: scheme.onSurfaceVariant,
       ),
-      labelSmall: GoogleFonts.nunitoSans(
-        textStyle: baseText.labelSmall,
+      labelSmall: baseText.labelSmall?.copyWith(
+        fontFamily: 'NunitoSans',
         fontWeight: FontWeight.w700,
         color: scheme.onSurfaceVariant,
       ),

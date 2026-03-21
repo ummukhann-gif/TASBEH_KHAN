@@ -37,6 +37,10 @@ class AppStrings {
     'Kunlik maqsad bajarildi',
     'Дневная цель достигнута',
   );
+  String get goalReachedCompact =>
+      _pick('Goal reached', 'Maqsad bajarildi', 'Цель достигнута');
+  String get infinityMode =>
+      _pick('Infinity mode', 'Cheksiz rejim', 'Бесконечный режим');
   String get todayFocus =>
       _pick('Today Focus', 'Bugungi amaliyot', 'Сегодняшняя практика');
   String get totalDhikr => _pick('Total Dhikr', 'Jami zikr', 'Всего зикров');
@@ -173,6 +177,14 @@ class AppStrings {
   }
 
   String relativeDate(String label, String time) => '$label • $time';
+
+  String goalProgressCompact(int count, String targetLabel) {
+    return switch (language) {
+      AppLanguage.english => 'To goal $count/$targetLabel',
+      AppLanguage.uzbek => 'Goalgacha $count/$targetLabel',
+      AppLanguage.russian => 'До цели $count/$targetLabel',
+    };
+  }
 
   String _pick(String english, String uzbek, String russian) {
     return switch (language) {

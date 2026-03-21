@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_state.dart';
 import 'screens/main_shell.dart';
@@ -7,7 +6,6 @@ import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  GoogleFonts.config.allowRuntimeFetching = false;
   final state = await TasbihAppState.load();
   runApp(TerraTasbihApp(state: state));
 }

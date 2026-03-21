@@ -32,7 +32,6 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  google_fonts: ^8.0.2
   material_symbols_icons: ^4.2906.0
   shared_preferences: ^2.5.3
 
@@ -57,6 +56,21 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  fonts:
+    - family: Literata
+      fonts:
+        - asset: assets/fonts/Literata.ttf
+          weight: 400
+        - asset: assets/fonts/Literata.ttf
+          weight: 700
+        - asset: assets/fonts/Literata.ttf
+          weight: 800
+    - family: NunitoSans
+      fonts:
+        - asset: assets/fonts/NunitoSans.ttf
+          weight: 400
+        - asset: assets/fonts/NunitoSans.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

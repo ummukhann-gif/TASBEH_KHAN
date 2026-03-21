@@ -98,8 +98,18 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
             ? constraints.maxWidth
             : widget.size;
         final width = widget.expanded ? availableWidth : widget.size;
-        final height = widget.expanded ? 88.0 : widget.size;
+        final height = widget.expanded ? 106.0 : widget.size;
         final borderRadius = _scaledRadius(width, height);
+        final compact = !widget.expanded && height < 110;
+        final collapsedIconSize = compact ? height * 0.28 : 58.0;
+        final collapsedGap = compact ? height * 0.06 : 12.0;
+        final collapsedLabelStyle = Theme.of(context).textTheme.labelMedium
+            ?.copyWith(
+              color: scheme.onPrimary.withValues(alpha: 0.86),
+              letterSpacing: compact ? 1.6 : 2.4,
+              fontWeight: FontWeight.w800,
+              fontSize: compact ? 8.0 : null,
+            );
 
         return TweenAnimationBuilder<double>(
           tween: Tween(begin: 1, end: widget.expanded ? 0.98 : 1),
@@ -192,22 +202,10 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
                                     Symbols.fingerprint,
                                     fill: 1,
                                     color: scheme.onPrimary,
-                                    size: 58,
+                                    size: collapsedIconSize,
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'TAP',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(
-                                          color: scheme.onPrimary.withValues(
-                                            alpha: 0.86,
-                                          ),
-                                          letterSpacing: 2.4,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
+                                  SizedBox(height: collapsedGap),
+                                  Text('TAP', style: collapsedLabelStyle),
                                 ],
                               ),
                       ),

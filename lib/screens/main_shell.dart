@@ -104,11 +104,7 @@ class _MainShellState extends State<MainShell> {
     }
 
     setState(() => _currentIndex = index);
-    _controller.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutCubic,
-    );
+    _controller.jumpToPage(index);
   }
 }
 

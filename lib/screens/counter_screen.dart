@@ -7,6 +7,8 @@ import '../app_state.dart';
 import '../app_strings.dart';
 import '../widgets/liquid_counter_button.dart';
 
+const _bottomNavOverlayHeight = 12.0;
+
 class CounterScreen extends StatefulWidget {
   const CounterScreen({super.key});
 
@@ -36,54 +38,142 @@ class _CounterScreenState extends State<CounterScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final width = math.min(constraints.maxWidth, 520.0);
-            final collapsedSize = math.min(width * 0.68, 288.0);
+            final height = constraints.maxHeight;
+            const collapsedCardHeight = 88.0;
+            final expandedCardHeight = (height * 0.42).clamp(220.0, 340.0);
 
             return Center(
               child: SizedBox(
                 width: width,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 112),
-                  children: [
-                    Text(
-                      strings.appTitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w800,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  child: Column(
+                    children: [
+                      Text(
+                        strings.appTitle,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    _CurrentDhikrCard(
-                      app: app,
-                      strings: strings,
-                      expanded: _expanded,
-                      onToggle: () => setState(() => _expanded = !_expanded),
-                    ),
-                    const SizedBox(height: 18),
-                    _CounterHero(
-                      app: app,
-                      strings: strings,
-                      expanded: _expanded,
-                      buttonSize: collapsedSize,
-                      onTap: _increment,
-                      onTargetTap: () => _showTargetSheet(context, app),
-                    ),
-                    const SizedBox(height: 22),
-                    _CounterActions(app: app, strings: strings),
-                    const SizedBox(height: 20),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 420),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: _expanded
-                          ? const SizedBox.shrink()
-                          : _TodayStatusPill(
-                              key: const ValueKey('status'),
-                              app: app,
-                              strings: strings,
-                            ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      _CurrentDhikrCard(
+                        app: app,
+                        strings: strings,
+                        expanded: _expanded,
+                        collapsedHeight: collapsedCardHeight,
+                        expandedHeight: expandedCardHeight.toDouble(),
+                        onToggle: () => setState(() => _expanded = !_expanded),
+                      ),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, bodyConstraints) {
+                            final dense = bodyConstraints.maxHeight < 360;
+                            final superDense = bodyConstraints.maxHeight < 300;
+                            final compactStatus = dense || _expanded;
+                            final showStatus = !superDense;
+                            final navDockOffset = _bottomNavOverlayHeight +
+                                (dense ? 6.0 : 10.0);
+                            final statusHeight = showStatus
+                                ? (compactStatus ? 40.0 : 50.0)
+                                : 0.0;
+                            final actionsHeight = superDense
+                                ? 62.0
+                                : (dense ? 68.0 : 82.0);
+                            final statusGap = compactStatus ? 6.0 : 12.0;
+                            final bottomBlockHeight =
+                                actionsHeight +
+                                (showStatus ? statusGap + statusHeight : 0.0);
+                            final heroRegionHeight =
+                                bodyConstraints.maxHeight -
+                                bottomBlockHeight -
+                                navDockOffset;
+
+                            return Stack(
+                              children: [
+                                Align(
+                                  alignment: Alignment.topCenter,
+                                  child: Transform.translate(
+                                    offset: Offset(0, dense ? -14 : -30),
+                                    child: SizedBox(
+                                      height: math.max(heroRegionHeight, 118.0),
+                                      child: _CounterHero(
+                                        app: app,
+                                        strings: strings,
+                                        expanded: _expanded,
+                                        availableHeight: math.max(
+                                          heroRegionHeight,
+                                          118.0,
+                                        ),
+                                        onTap: _increment,
+                                        onTargetTap: () =>
+                                            _showTargetSheet(context, app),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: navDockOffset,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          height: actionsHeight,
+                                          child: Center(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: _CounterActions(
+                                                app: app,
+                                                strings: strings,
+                                                dense: dense || _expanded,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        ClipRect(
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 420,
+                                            ),
+                                            curve: Curves.easeOutCubic,
+                                            height: showStatus
+                                                ? statusHeight + statusGap
+                                                : 0,
+                                            child: Align(
+                                              alignment: Alignment.topCenter,
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                  top: statusGap,
+                                                ),
+                                                child: SizedBox(
+                                                  height: statusHeight,
+                                                  child: _TodayStatusPill(
+                                                    app: app,
+                                                    strings: strings,
+                                                    dense: compactStatus,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -202,12 +292,16 @@ class _CurrentDhikrCard extends StatelessWidget {
     required this.app,
     required this.strings,
     required this.expanded,
+    required this.collapsedHeight,
+    required this.expandedHeight,
     required this.onToggle,
   });
 
   final TasbihAppState app;
   final AppStrings strings;
   final bool expanded;
+  final double collapsedHeight;
+  final double expandedHeight;
   final VoidCallback onToggle;
 
   @override
@@ -222,6 +316,7 @@ class _CurrentDhikrCard extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeOutCubic,
+      height: expanded ? expandedHeight : collapsedHeight,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
@@ -286,92 +381,80 @@ class _CurrentDhikrCard extends StatelessWidget {
               ),
             ),
           ),
-          ClipRect(
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOutCubic,
-              child: expanded
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+          if (expanded) ...[
+            Divider(color: scheme.primary.withValues(alpha: 0.1), height: 1),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.12),
+                        ),
+                      ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Divider(
-                            color: scheme.primary.withValues(alpha: 0.1),
-                            height: 1,
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: scheme.primary.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: scheme.primary.withValues(alpha: 0.12),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  app.currentDhikr.arabic,
-                                  textAlign: TextAlign.right,
-                                  textDirection: TextDirection.rtl,
-                                  style: theme.textTheme.headlineSmall
-                                      ?.copyWith(
-                                        color: scheme.primary,
-                                        height: 1.6,
-                                      ),
-                                ),
-                                const SizedBox(height: 14),
-                                Text(
-                                  app.currentDhikr.transliteration,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: scheme.primary.withValues(
-                                      alpha: 0.85,
-                                    ),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  app.currentDhikr.translation,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                    fontStyle: FontStyle.italic,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            app.currentDhikr.arabic,
+                            textAlign: TextAlign.right,
+                            textDirection: TextDirection.rtl,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: scheme.primary,
+                              height: 1.45,
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              strings.quickSelection.toUpperCase(),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.tertiary,
-                                letterSpacing: 1.7,
-                                fontWeight: FontWeight.w800,
-                              ),
+                          const SizedBox(height: 14),
+                          Text(
+                            app.currentDhikr.transliteration,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.primary.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          for (final item in quickItems) ...[
-                            _QuickDhikrTile(
-                              dhikr: item,
-                              onTap: () => app.selectDhikr(item.id),
+                          const SizedBox(height: 8),
+                          Text(
+                            app.currentDhikr.translation,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                              height: 1.5,
                             ),
-                            if (item != quickItems.last)
-                              const SizedBox(height: 10),
-                          ],
+                          ),
                         ],
                       ),
-                    )
-                  : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        strings.quickSelection.toUpperCase(),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.tertiary,
+                          letterSpacing: 1.7,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final item in quickItems) ...[
+                      _QuickDhikrTile(
+                        dhikr: item,
+                        onTap: () => app.selectDhikr(item.id),
+                      ),
+                      if (item != quickItems.last) const SizedBox(height: 10),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -421,11 +504,16 @@ class _QuickDhikrTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                dhikr.arabic,
-                textDirection: TextDirection.rtl,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
+              Flexible(
+                child: Text(
+                  dhikr.arabic,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  textDirection: TextDirection.rtl,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -441,7 +529,7 @@ class _CounterHero extends StatelessWidget {
     required this.app,
     required this.strings,
     required this.expanded,
-    required this.buttonSize,
+    required this.availableHeight,
     required this.onTap,
     required this.onTargetTap,
   });
@@ -449,7 +537,7 @@ class _CounterHero extends StatelessWidget {
   final TasbihAppState app;
   final AppStrings strings;
   final bool expanded;
-  final double buttonSize;
+  final double availableHeight;
   final VoidCallback onTap;
   final VoidCallback onTargetTap;
 
@@ -458,63 +546,113 @@ class _CounterHero extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutCubic,
-      width: double.infinity,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 400),
-                opacity: expanded ? 0 : 0.42,
-                child: _RingBackdrop(progress: app.progress),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final compactHero = availableHeight < 190;
+        final topGap = compactHero ? 2.0 : (expanded ? 6.0 : 8.0);
+        final buttonGap = compactHero ? 6.0 : (expanded ? 14.0 : 18.0);
+        final numberHeight = expanded
+            ? math.min(availableHeight * 0.18, 54.0)
+            : compactHero
+            ? math.min(availableHeight * 0.15, 38.0)
+            : math.min(availableHeight * 0.2, 82.0);
+        final targetHeight = compactHero ? 28.0 : 34.0;
+        final maxButtonByHeight = math.max(
+          availableHeight -
+              numberHeight -
+              targetHeight -
+              topGap -
+              buttonGap -
+              6,
+          64.0,
+        );
+        final idealButtonSize = expanded
+            ? math.min(width, math.max(availableHeight * 0.38, 92.0))
+            : compactHero
+            ? math.min(math.max(availableHeight * 0.4, 88.0), 132.0)
+            : math.min(width * 0.8, math.min(availableHeight * 0.64, 264.0));
+        final buttonSize = math.min(idealButtonSize, maxButtonByHeight);
+        final ringSize = expanded
+            ? buttonSize
+            : math.min(
+                buttonSize * 1.32,
+                math.min(availableHeight * 0.96, width * 0.9),
+              );
+        final numberStyle =
+            (expanded
+                    ? theme.textTheme.displaySmall
+                    : theme.textTheme.displayMedium)
+                ?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: numberHeight,
+                );
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic,
+          width: double.infinity,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: width,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 400),
+                          opacity: expanded ? 0 : 0.42,
+                          child: _RingBackdrop(
+                            progress: app.progress,
+                            size: ringSize.clamp(82.0, 340.0).toDouble(),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 420),
+                              curve: Curves.easeOutCubic,
+                              style: numberStyle ?? const TextStyle(),
+                              child: Text('${app.currentCount}'),
+                            ),
+                            SizedBox(height: topGap),
+                            _TargetPill(
+                              count: app.currentCount,
+                              targetLabel: app.currentTargetLabel,
+                              onTap: onTargetTap,
+                            ),
+                            SizedBox(height: buttonGap),
+                            LiquidCounterButton(
+                              onTap: onTap,
+                              expanded: expanded,
+                              size: buttonSize.clamp(64.0, 300.0).toDouble(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              Column(
-                children: [
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 420),
-                    curve: Curves.easeOutCubic,
-                    style:
-                        (expanded
-                                ? theme.textTheme.displaySmall
-                                : theme.textTheme.displayMedium)
-                            ?.copyWith(
-                              color: scheme.primary,
-                              fontWeight: FontWeight.w800,
-                            ) ??
-                        const TextStyle(),
-                    child: Text('${app.currentCount}'),
-                  ),
-                  const SizedBox(height: 8),
-                  _TargetPill(
-                    count: app.currentCount,
-                    targetLabel: app.currentTargetLabel,
-                    onTap: onTargetTap,
-                  ),
-                  const SizedBox(height: 22),
-                  LiquidCounterButton(
-                    onTap: onTap,
-                    expanded: expanded,
-                    size: buttonSize,
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _RingBackdrop extends StatelessWidget {
-  const _RingBackdrop({required this.progress});
+  const _RingBackdrop({required this.progress, required this.size});
 
   final double progress;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -526,7 +664,7 @@ class _RingBackdrop extends StatelessWidget {
       curve: Curves.easeOutCubic,
       builder: (context, value, _) {
         return CustomPaint(
-          size: const Size(320, 320),
+          size: Size.square(size),
           painter: _RingPainter(
             progress: value,
             activeColor: scheme.primary.withValues(alpha: 0.2),
@@ -633,10 +771,15 @@ class _TargetPill extends StatelessWidget {
 }
 
 class _CounterActions extends StatelessWidget {
-  const _CounterActions({required this.app, required this.strings});
+  const _CounterActions({
+    required this.app,
+    required this.strings,
+    required this.dense,
+  });
 
   final TasbihAppState app;
   final AppStrings strings;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -647,20 +790,23 @@ class _CounterActions extends StatelessWidget {
           icon: Symbols.refresh,
           label: strings.reset,
           active: false,
+          dense: dense,
           onTap: app.currentCount == 0 ? null : app.resetCurrentSession,
         ),
-        const SizedBox(width: 26),
+        SizedBox(width: dense ? 20 : 26),
         _ActionItem(
           icon: Symbols.volume_up,
           label: strings.sound,
           active: app.soundEnabled,
+          dense: dense,
           onTap: () => app.setSoundEnabled(!app.soundEnabled),
         ),
-        const SizedBox(width: 26),
+        SizedBox(width: dense ? 20 : 26),
         _ActionItem(
           icon: Symbols.vibration,
           label: strings.haptic,
           active: app.hapticsEnabled,
+          dense: dense,
           onTap: () => app.setHapticsEnabled(!app.hapticsEnabled),
         ),
       ],
@@ -673,12 +819,14 @@ class _ActionItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.active,
+    required this.dense,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final bool active;
+  final bool dense;
   final VoidCallback? onTap;
 
   @override
@@ -694,8 +842,8 @@ class _ActionItem extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 220),
-              width: 48,
-              height: 48,
+              width: dense ? 42 : 48,
+              height: dense ? 42 : 48,
               decoration: BoxDecoration(
                 color: active
                     ? scheme.secondary.withValues(alpha: 0.95)
@@ -707,12 +855,13 @@ class _ActionItem extends StatelessWidget {
                 color: active ? scheme.onSecondary : scheme.secondary,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: dense ? 6 : 8),
             Text(
               label.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: scheme.secondary.withValues(alpha: 0.78),
                 letterSpacing: 0.8,
+                fontSize: dense ? 9 : null,
               ),
             ),
           ],
@@ -723,77 +872,91 @@ class _ActionItem extends StatelessWidget {
 }
 
 class _TodayStatusPill extends StatelessWidget {
-  const _TodayStatusPill({super.key, required this.app, required this.strings});
+  const _TodayStatusPill({
+    required this.app,
+    required this.strings,
+    required this.dense,
+  });
 
   final TasbihAppState app;
   final AppStrings strings;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final minutes = app.todayDuration.inMinutes;
+    final target = app.currentTarget;
+    final reached = app.isGoalReached;
+    final label = target == null
+        ? strings.infinityMode
+        : reached
+        ? strings.goalReachedCompact
+        : strings.goalProgressCompact(app.currentCount, '$target');
+    final icon = target == null
+        ? Symbols.all_inclusive
+        : reached
+        ? Symbols.task_alt
+        : Symbols.flag;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 12 : 14,
+        vertical: dense ? 8 : 10,
+      ),
       decoration: BoxDecoration(
         color: scheme.tertiaryContainer.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: scheme.tertiary.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: dense ? 28 : 32,
+            height: dense ? 28 : 32,
             decoration: BoxDecoration(
               color: scheme.tertiary.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: Icon(Symbols.trending_up, fill: 1, color: scheme.tertiary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  app.todayCount >= (app.currentTarget ?? 33)
-                      ? strings.dailyGoalReached
-                      : strings.todayFocus,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  strings.sessionSummary(app.todaySessionCount, minutes),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(letterSpacing: 0.9),
-                ),
-              ],
+            child: Icon(
+              icon,
+              size: dense ? 16 : 18,
+              fill: 1,
+              color: scheme.tertiary,
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$minutes',
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineSmall?.copyWith(color: scheme.primary),
+          SizedBox(width: dense ? 8 : 10),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: dense ? 13 : 14,
+                color: reached ? scheme.primary : scheme.onSurface,
               ),
-              Text(
-                strings.minutes.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.primary.withValues(alpha: 0.7),
-                  letterSpacing: 0.8,
+            ),
+          ),
+          if (target != null)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: dense ? 6 : 10,
+                vertical: dense ? 3 : 5,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: reached ? 0.18 : 0.1),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '${app.currentCount}/$target',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: dense ? 11 : null,
                 ),
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );
