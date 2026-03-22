@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -20,37 +19,76 @@ class LiquidCounterButton extends StatefulWidget {
   State<LiquidCounterButton> createState() => _LiquidCounterButtonState();
 }
 
-class _LiquidCounterButtonState extends State<LiquidCounterButton> {
+class _LiquidCounterButtonState extends State<LiquidCounterButton>
+    with SingleTickerProviderStateMixin {
   final math.Random _random = math.Random();
-  BorderRadius _radius = BorderRadius.zero;
-  Timer? _timer;
+  late final AnimationController _morphController;
+  BorderRadius _splashRadius = BorderRadius.zero;
+  BorderRadius _settleRadius = BorderRadius.zero;
 
   @override
   void initState() {
     super.initState();
-    _radius = _generateRadius();
-    _timer = Timer.periodic(const Duration(milliseconds: 1700), (_) {
-      if (!mounted || widget.expanded) {
-        return;
+    _splashRadius = _generateRadius();
+    _settleRadius = _generateRadius();
+    _morphController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 680),
+    )..addListener(() {
+      if (mounted) {
+        setState(() {});
       }
-      setState(() => _radius = _generateRadius());
     });
   }
 
   @override
+  void didUpdateWidget(covariant LiquidCounterButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.expanded && !oldWidget.expanded) {
+      _morphController.reset();
+    }
+  }
+
+  @override
   void dispose() {
-    _timer?.cancel();
+    _morphController.dispose();
     super.dispose();
   }
 
   BorderRadius _generateRadius() {
-    double r() => (_random.nextInt(42) + 28).toDouble();
+    return BorderRadius.only(
+      topLeft: Radius.elliptical(
+        (_random.nextInt(52) + 26).toDouble(),
+        (_random.nextInt(44) + 22).toDouble(),
+      ),
+      topRight: Radius.elliptical(
+        (_random.nextInt(58) + 20).toDouble(),
+        (_random.nextInt(48) + 20).toDouble(),
+      ),
+      bottomRight: Radius.elliptical(
+        (_random.nextInt(50) + 24).toDouble(),
+        (_random.nextInt(54) + 18).toDouble(),
+      ),
+      bottomLeft: Radius.elliptical(
+        (_random.nextInt(54) + 22).toDouble(),
+        (_random.nextInt(50) + 20).toDouble(),
+      ),
+    );
+  }
+
+  BorderRadius _scaleBorderRadius(
+    BorderRadius source,
+    double width,
+    double height,
+  ) {
+    Radius scale(Radius radius) =>
+        Radius.elliptical(radius.x / 100 * width, radius.y / 100 * height);
 
     return BorderRadius.only(
-      topLeft: Radius.elliptical(r(), r()),
-      topRight: Radius.elliptical(100 - r(), r()),
-      bottomRight: Radius.elliptical(100 - r(), 100 - r()),
-      bottomLeft: Radius.elliptical(r(), 100 - r()),
+      topLeft: scale(source.topLeft),
+      topRight: scale(source.topRight),
+      bottomRight: scale(source.bottomRight),
+      bottomLeft: scale(source.bottomLeft),
     );
   }
 
@@ -59,15 +97,29 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
       return BorderRadius.circular(30);
     }
 
-    Radius scale(Radius source) =>
-        Radius.elliptical(source.x / 100 * width, source.y / 100 * height);
+    final baseRadius = BorderRadius.circular(math.min(width, height) * 0.5);
+    final splash = _scaleBorderRadius(_splashRadius, width, height);
+    final settle = _scaleBorderRadius(_settleRadius, width, height);
 
-    return BorderRadius.only(
-      topLeft: scale(_radius.topLeft),
-      topRight: scale(_radius.topRight),
-      bottomRight: scale(_radius.bottomRight),
-      bottomLeft: scale(_radius.bottomLeft),
-    );
+    final t = _morphController.value;
+    if (t == 0) {
+      return baseRadius;
+    }
+
+    if (t <= 0.34) {
+      final phase = Curves.easeOutQuart.transform(t / 0.34);
+      return BorderRadius.lerp(baseRadius, splash, phase)!;
+    }
+
+    if (t <= 0.64) {
+      final phase = Curves.easeInOutCubicEmphasized.transform(
+        (t - 0.34) / 0.30,
+      );
+      return BorderRadius.lerp(splash, settle, phase)!;
+    }
+
+    final phase = Curves.easeOutBack.transform((t - 0.64) / 0.36);
+    return BorderRadius.lerp(settle, baseRadius, phase)!;
   }
 
   void _splashShape() {
@@ -75,18 +127,11 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
       return;
     }
 
-    var count = 0;
-    Timer.periodic(const Duration(milliseconds: 80), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() => _radius = _generateRadius());
-      count += 1;
-      if (count >= 3) {
-        timer.cancel();
-      }
+    setState(() {
+      _splashRadius = _generateRadius();
+      _settleRadius = _generateRadius();
     });
+    _morphController.forward(from: 0);
   }
 
   @override
@@ -103,6 +148,12 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
         final compact = !widget.expanded && height < 110;
         final collapsedIconSize = compact ? height * 0.28 : 58.0;
         final collapsedGap = compact ? height * 0.06 : 12.0;
+        final tapScale = widget.expanded
+            ? 0.98
+            : (1 - _morphController.value * 0.068);
+        final innerMargin = widget.expanded
+            ? 12.0
+            : 12.0 + (1 - Curves.easeOut.transform(_morphController.value)) * 6;
         final collapsedLabelStyle = Theme.of(context).textTheme.labelMedium
             ?.copyWith(
               color: scheme.onPrimary.withValues(alpha: 0.86),
@@ -112,7 +163,7 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
             );
 
         return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 1, end: widget.expanded ? 0.98 : 1),
+          tween: Tween(begin: 1, end: tapScale),
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeOutBack,
           builder: (context, scale, child) {
@@ -149,9 +200,9 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton> {
                 fit: StackFit.expand,
                 children: [
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 560),
-                    curve: Curves.easeOutCubic,
-                    margin: const EdgeInsets.all(12),
+                    duration: const Duration(milliseconds: 680),
+                    curve: Curves.easeOutQuart,
+                    margin: EdgeInsets.all(innerMargin),
                     decoration: BoxDecoration(
                       borderRadius: borderRadius,
                       border: Border.all(

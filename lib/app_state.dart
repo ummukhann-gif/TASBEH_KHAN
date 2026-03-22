@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 
 import 'app_strings.dart';
 import 'theme.dart';
@@ -68,6 +71,7 @@ class TasbihAppState extends ChangeNotifier {
   AppLanguage _language = AppLanguage.english;
   AppPalette _palette = AppPalette.terra;
   DateTime? _currentSessionStartedAt;
+  AudioPlayer? _feedbackPlayer;
 
   static Future<TasbihAppState> load() async {
     final state = TasbihAppState._();
@@ -357,11 +361,17 @@ class TasbihAppState extends ChangeNotifier {
 
   void setSoundEnabled(bool value) {
     _soundEnabled = value;
+    if (value) {
+      unawaited(_playTapSound());
+    }
     _touch();
   }
 
   void setHapticsEnabled(bool value) {
     _hapticsEnabled = value;
+    if (value) {
+      unawaited(_triggerHaptics());
+    }
     _touch();
   }
 
@@ -438,10 +448,40 @@ class TasbihAppState extends ChangeNotifier {
 
   Future<void> _triggerFeedback() async {
     if (_hapticsEnabled) {
-      unawaited(HapticFeedback.mediumImpact());
+      unawaited(_triggerHaptics());
     }
     if (_soundEnabled) {
-      unawaited(SystemSound.play(SystemSoundType.click));
+      unawaited(_playTapSound());
+    }
+  }
+
+  Future<void> _triggerHaptics() async {
+    try {
+      if (!kIsWeb && await Vibration.hasVibrator() == true) {
+        await Vibration.vibrate(duration: 22, amplitude: 96);
+        return;
+      }
+    } catch (_) {}
+
+    await HapticFeedback.selectionClick();
+  }
+
+  Future<void> _playTapSound() async {
+    try {
+      if (kIsWeb) {
+        await SystemSound.play(SystemSoundType.click);
+        return;
+      }
+
+      final player = _feedbackPlayer ??= AudioPlayer();
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.play(
+        AssetSource('audio/tap.wav'),
+        mode: PlayerMode.lowLatency,
+        volume: 0.65,
+      );
+    } catch (_) {
+      await SystemSound.play(SystemSoundType.click);
     }
   }
 
@@ -508,6 +548,12 @@ class TasbihAppState extends ChangeNotifier {
             .toIso8601String(),
       }),
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_feedbackPlayer?.dispose() ?? Future<void>.value());
+    super.dispose();
   }
 }
 
