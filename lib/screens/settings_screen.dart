@@ -101,30 +101,62 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ToggleCard(
-                      icon: Symbols.vibration,
-                      accentColor: scheme.primary,
-                      title: strings.haptic,
-                      subtitle: strings.hapticDesc,
-                      value: app.hapticsEnabled,
-                      onChanged: app.setHapticsEnabled,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _ToggleCard(
-                      icon: Symbols.volume_up,
-                      accentColor: scheme.tertiary,
-                      title: strings.sound,
-                      subtitle: strings.soundDesc,
-                      value: app.soundEnabled,
-                      onChanged: app.setSoundEnabled,
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 380;
+
+                  if (compact) {
+                    return Column(
+                      children: [
+                        _ToggleCard(
+                          icon: Symbols.vibration,
+                          accentColor: scheme.primary,
+                          title: strings.haptic,
+                          subtitle: strings.hapticDesc,
+                          value: app.hapticsEnabled,
+                          compact: true,
+                          onChanged: app.setHapticsEnabled,
+                        ),
+                        const SizedBox(height: 14),
+                        _ToggleCard(
+                          icon: Symbols.volume_up,
+                          accentColor: scheme.tertiary,
+                          title: strings.sound,
+                          subtitle: strings.soundDesc,
+                          value: app.soundEnabled,
+                          compact: true,
+                          onChanged: app.setSoundEnabled,
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _ToggleCard(
+                          icon: Symbols.vibration,
+                          accentColor: scheme.primary,
+                          title: strings.haptic,
+                          subtitle: strings.hapticDesc,
+                          value: app.hapticsEnabled,
+                          onChanged: app.setHapticsEnabled,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _ToggleCard(
+                          icon: Symbols.volume_up,
+                          accentColor: scheme.tertiary,
+                          title: strings.sound,
+                          subtitle: strings.soundDesc,
+                          value: app.soundEnabled,
+                          onChanged: app.setSoundEnabled,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 14),
               _SettingsSection(
@@ -350,6 +382,7 @@ class _ToggleCard extends StatelessWidget {
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.compact = false,
   });
 
   final IconData icon;
@@ -358,13 +391,14 @@ class _ToggleCard extends StatelessWidget {
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 16 : 18),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
@@ -372,8 +406,8 @@ class _ToggleCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: compact ? 38 : 40,
+            height: compact ? 38 : 40,
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.14),
               shape: BoxShape.circle,
@@ -389,10 +423,16 @@ class _ToggleCard extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
+                    fontSize: compact ? 17 : null,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  subtitle,
+                  maxLines: compact ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ],
             ),
           ),
