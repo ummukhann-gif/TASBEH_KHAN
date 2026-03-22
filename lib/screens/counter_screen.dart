@@ -7,8 +7,6 @@ import '../app_state.dart';
 import '../app_strings.dart';
 import '../widgets/liquid_counter_button.dart';
 
-const _bottomNavOverlayHeight = 12.0;
-
 class CounterScreen extends StatefulWidget {
   const CounterScreen({super.key});
 
@@ -25,6 +23,8 @@ class _CounterScreenState extends State<CounterScreen> {
     final strings = app.strings;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final bottomNavClearance =
+        72.0 + MediaQuery.viewPaddingOf(context).bottom.clamp(0.0, 12.0);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -46,7 +46,7 @@ class _CounterScreenState extends State<CounterScreen> {
               child: SizedBox(
                 width: width,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  padding: EdgeInsets.fromLTRB(20, 4, 20, bottomNavClearance),
                   child: Column(
                     children: [
                       Text(
@@ -74,8 +74,6 @@ class _CounterScreenState extends State<CounterScreen> {
                             final superDense = bodyConstraints.maxHeight < 300;
                             final compactStatus = dense || _expanded;
                             final showStatus = !superDense;
-                            final navDockOffset = _bottomNavOverlayHeight +
-                                (dense ? 6.0 : 10.0);
                             final statusHeight = showStatus
                                 ? (compactStatus ? 40.0 : 50.0)
                                 : 0.0;
@@ -83,87 +81,75 @@ class _CounterScreenState extends State<CounterScreen> {
                                 ? 62.0
                                 : (dense ? 68.0 : 82.0);
                             final statusGap = compactStatus ? 6.0 : 12.0;
+                            final controlsTopGap = compactStatus ? 8.0 : 14.0;
                             final bottomBlockHeight =
+                                controlsTopGap +
                                 actionsHeight +
                                 (showStatus ? statusGap + statusHeight : 0.0);
                             final heroRegionHeight =
-                                bodyConstraints.maxHeight -
-                                bottomBlockHeight -
-                                navDockOffset;
+                                bodyConstraints.maxHeight - bottomBlockHeight;
 
-                            return Stack(
+                            return Column(
                               children: [
-                                Align(
-                                  alignment: Alignment.topCenter,
-                                  child: Transform.translate(
-                                    offset: Offset(0, dense ? -14 : -30),
-                                    child: SizedBox(
-                                      height: math.max(heroRegionHeight, 118.0),
-                                      child: _CounterHero(
-                                        app: app,
-                                        strings: strings,
-                                        expanded: _expanded,
-                                        availableHeight: math.max(
-                                          heroRegionHeight,
-                                          118.0,
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        top: _expanded ? 0 : (dense ? 0 : 4),
+                                      ),
+                                      child: SizedBox(
+                                        height: math.max(heroRegionHeight, 118.0),
+                                        child: _CounterHero(
+                                          app: app,
+                                          strings: strings,
+                                          expanded: _expanded,
+                                          availableHeight: math.max(
+                                            heroRegionHeight,
+                                            118.0,
+                                          ),
+                                          onTap: _increment,
+                                          onTargetTap: () =>
+                                              _showTargetSheet(context, app),
                                         ),
-                                        onTap: _increment,
-                                        onTargetTap: () =>
-                                            _showTargetSheet(context, app),
                                       ),
                                     ),
                                   ),
                                 ),
-                                Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: navDockOffset,
+                                SizedBox(height: controlsTopGap),
+                                SizedBox(
+                                  height: actionsHeight,
+                                  child: Center(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: _CounterActions(
+                                        app: app,
+                                        strings: strings,
+                                        dense: compactStatus,
+                                      ),
                                     ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          height: actionsHeight,
-                                          child: Center(
-                                            child: FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              child: _CounterActions(
-                                                app: app,
-                                                strings: strings,
-                                                dense: dense || _expanded,
-                                              ),
-                                            ),
+                                  ),
+                                ),
+                                ClipRect(
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 420),
+                                    curve: Curves.easeOutCubic,
+                                    height: showStatus
+                                        ? statusHeight + statusGap
+                                        : 0,
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Padding(
+                                        padding: EdgeInsets.only(top: statusGap),
+                                        child: SizedBox(
+                                          height: statusHeight,
+                                          child: _TodayStatusPill(
+                                            app: app,
+                                            strings: strings,
+                                            dense: compactStatus,
                                           ),
                                         ),
-                                        ClipRect(
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                              milliseconds: 420,
-                                            ),
-                                            curve: Curves.easeOutCubic,
-                                            height: showStatus
-                                                ? statusHeight + statusGap
-                                                : 0,
-                                            child: Align(
-                                              alignment: Alignment.topCenter,
-                                              child: Padding(
-                                                padding: EdgeInsets.only(
-                                                  top: statusGap,
-                                                ),
-                                                child: SizedBox(
-                                                  height: statusHeight,
-                                                  child: _TodayStatusPill(
-                                                    app: app,
-                                                    strings: strings,
-                                                    dense: compactStatus,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -472,54 +458,98 @@ class _QuickDhikrTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return Material(
-      color: scheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 320;
+
+        return Material(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: 0.35),
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.35),
+                ),
+              ),
+              child: compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            dhikr.arabic,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                            textDirection: TextDirection.rtl,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          dhikr.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dhikr.translation,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                dhikr.title,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                dhikr.translation,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Text(
+                            dhikr.arabic,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                            textDirection: TextDirection.rtl,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dhikr.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(dhikr.translation, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  dhikr.arabic,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  textDirection: TextDirection.rtl,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -549,32 +579,77 @@ class _CounterHero extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final ultraCompactHero = availableHeight < 130;
         final compactHero = availableHeight < 190;
-        final topGap = compactHero ? 2.0 : (expanded ? 6.0 : 8.0);
-        final buttonGap = compactHero ? 6.0 : (expanded ? 14.0 : 18.0);
+        final smallViewportHero = !expanded &&
+            (availableHeight < 280 || width < 360);
+        final topGap = ultraCompactHero
+            ? 0.0
+            : compactHero
+            ? 2.0
+            : smallViewportHero
+            ? 4.0
+            : (expanded ? 6.0 : 8.0);
+        final buttonGap = ultraCompactHero
+            ? 4.0
+            : compactHero
+            ? 6.0
+            : smallViewportHero
+            ? 10.0
+            : (expanded ? 14.0 : 18.0);
         final numberHeight = expanded
             ? math.min(availableHeight * 0.18, 54.0)
+            : ultraCompactHero
+            ? math.min(availableHeight * 0.12, 28.0)
             : compactHero
             ? math.min(availableHeight * 0.15, 38.0)
+            : smallViewportHero
+            ? math.min(availableHeight * 0.14, 34.0)
             : math.min(availableHeight * 0.2, 82.0);
-        final targetHeight = compactHero ? 28.0 : 34.0;
+        final targetHeight = ultraCompactHero
+            ? 22.0
+            : compactHero
+            ? 28.0
+            : smallViewportHero
+            ? 26.0
+            : 34.0;
         final maxButtonByHeight = math.max(
           availableHeight -
               numberHeight -
               targetHeight -
               topGap -
               buttonGap -
-              6,
-          64.0,
+              (ultraCompactHero ? 0 : (smallViewportHero ? 2 : 6)),
+          ultraCompactHero ? 42.0 : 64.0,
         );
         final idealButtonSize = expanded
             ? math.min(width, math.max(availableHeight * 0.38, 92.0))
+            : ultraCompactHero
+            ? math.min(
+                math.max(math.min(width * 0.5, 148.0), 96.0),
+                math.min(availableHeight * 0.62, 132.0),
+              )
             : compactHero
             ? math.min(math.max(availableHeight * 0.4, 88.0), 132.0)
+            : smallViewportHero
+            ? math.min(
+                math.max(math.min(width * 0.58, 188.0), 148.0),
+                math.min(availableHeight * 0.74, 188.0),
+              )
             : math.min(width * 0.8, math.min(availableHeight * 0.64, 264.0));
         final buttonSize = math.min(idealButtonSize, maxButtonByHeight);
         final ringSize = expanded
             ? buttonSize
+            : ultraCompactHero
+            ? math.min(
+                buttonSize * 1.08,
+                math.min(availableHeight * 0.74, width * 0.62),
+              )
+            : smallViewportHero
+            ? math.min(
+                buttonSize * 1.18,
+                math.min(availableHeight * 0.9, width * 0.78),
+              )
             : math.min(
                 buttonSize * 1.32,
                 math.min(availableHeight * 0.96, width * 0.9),
@@ -625,13 +700,22 @@ class _CounterHero extends StatelessWidget {
                             _TargetPill(
                               count: app.currentCount,
                               targetLabel: app.currentTargetLabel,
+                              dense:
+                                  ultraCompactHero ||
+                                  compactHero ||
+                                  smallViewportHero,
                               onTap: onTargetTap,
                             ),
                             SizedBox(height: buttonGap),
                             LiquidCounterButton(
                               onTap: onTap,
                               expanded: expanded,
-                              size: buttonSize.clamp(64.0, 300.0).toDouble(),
+                              size: buttonSize
+                                  .clamp(
+                                    ultraCompactHero ? 42.0 : 64.0,
+                                    300.0,
+                                  )
+                                  .toDouble(),
                             ),
                           ],
                         ),
@@ -729,11 +813,13 @@ class _TargetPill extends StatelessWidget {
   const _TargetPill({
     required this.count,
     required this.targetLabel,
+    required this.dense,
     required this.onTap,
   });
 
   final int count;
   final String targetLabel;
+  final bool dense;
   final VoidCallback onTap;
 
   @override
@@ -747,21 +833,34 @@ class _TargetPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: EdgeInsets.symmetric(
+            horizontal: dense ? 10 : 12,
+            vertical: dense ? 5 : 6,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.target, size: 14, fill: 1, color: scheme.primary),
-              const SizedBox(width: 6),
+              Icon(
+                Symbols.target,
+                size: dense ? 12 : 14,
+                fill: 1,
+                color: scheme.primary,
+              ),
+              SizedBox(width: dense ? 4 : 6),
               Text(
                 '$count / $targetLabel',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: scheme.primary,
-                  letterSpacing: 1.1,
+                  letterSpacing: dense ? 0.7 : 1.1,
+                  fontSize: dense ? 10 : null,
                 ),
               ),
-              const SizedBox(width: 4),
-              Icon(Symbols.expand_more, size: 14, color: scheme.primary),
+              SizedBox(width: dense ? 2 : 4),
+              Icon(
+                Symbols.expand_more,
+                size: dense ? 12 : 14,
+                color: scheme.primary,
+              ),
             ],
           ),
         ),
