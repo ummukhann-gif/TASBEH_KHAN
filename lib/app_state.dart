@@ -16,6 +16,8 @@ class TasbihAppState extends ChangeNotifier {
 
   static const _prefsKey = 'terra_tasbih_state_v3';
 
+  Timer? _persistTimer;
+
   final List<DhikrDefinition> _builtInDhikrs = const [
     DhikrDefinition(
       id: 'subhanallah',
@@ -296,7 +298,7 @@ class TasbihAppState extends ChangeNotifier {
       notifyListeners();
     }
 
-    unawaited(_persist());
+    _schedulePersist();
   }
 
   void resetCurrentSession() {
@@ -523,7 +525,15 @@ class TasbihAppState extends ChangeNotifier {
 
   void _touch() {
     notifyListeners();
-    unawaited(_persist());
+    _schedulePersist();
+  }
+
+  // Debounce disk writes to prevent frame drops during rapid tapping
+  void _schedulePersist() {
+    _persistTimer?.cancel();
+    _persistTimer = Timer(const Duration(milliseconds: 500), () {
+      unawaited(_persist());
+    });
   }
 
   Future<void> _persist() async {
@@ -552,6 +562,10 @@ class TasbihAppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_persistTimer?.isActive ?? false) {
+      _persistTimer?.cancel();
+      unawaited(_persist());
+    }
     unawaited(_feedbackPlayer?.dispose() ?? Future<void>.value());
     super.dispose();
   }
