@@ -1,3 +1,7 @@
 ## 2024-05-24 - Expensive state reads at the app root and uncached platform calls
 **Learning:** In Flutter, calling platform channels like `Vibration.hasVibrator()` on frequent user interactions (like a tap counter) can block the main thread and introduce noticeable delay. Additionally, placing an `InheritedNotifier` (`AppScope.of(context)`) listener at the root of a complex widget tree (like `MainShell` containing a `PageView` of screens) forces the entire tree to rebuild on every state change, destroying performance.
 **Action:** Always cache the results of expensive platform calls if they are unlikely to change during the app's lifecycle. Push state listeners down the widget tree as far as possible, only reading state in the widgets that actually need to react to changes.
+
+## 2024-05-24 - AnimatedBuilder at root of MaterialApp destroys performance
+**Learning:** Wrapping the entire `MaterialApp` in an `AnimatedBuilder` that listens to the global app state (`ChangeNotifier`) causes the entire application to rebuild on every single state change (like a counter increment). This completely bypasses any lower-level state optimizations and guarantees terrible performance during frequent interactions.
+**Action:** Use a targeted `ValueNotifier` (e.g., `themeNotifier`) for root-level properties like themes and localization. Only notify this targeted listener when those specific properties change, keeping the `MaterialApp` rebuilds strictly limited to actual theme changes.

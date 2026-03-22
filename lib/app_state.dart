@@ -76,6 +76,9 @@ class TasbihAppState extends ChangeNotifier {
   DateTime? _currentSessionStartedAt;
   AudioPlayer? _feedbackPlayer;
 
+  /// Notifies listeners only when theme/locale properties change to prevent full app rebuilds
+  final ValueNotifier<int> themeNotifier = ValueNotifier<int>(0);
+
   static Future<TasbihAppState> load() async {
     final state = TasbihAppState._();
     final prefs = await SharedPreferences.getInstance();
@@ -380,21 +383,25 @@ class TasbihAppState extends ChangeNotifier {
 
   void setDarkModeEnabled(bool value) {
     _darkModeEnabled = value;
+    themeNotifier.value++;
     _touch();
   }
 
   void setTextScale(double value) {
     _textScale = value.clamp(0.9, 1.3);
+    themeNotifier.value++;
     _touch();
   }
 
   void setLanguage(AppLanguage value) {
     _language = value;
+    themeNotifier.value++;
     _touch();
   }
 
   void setPalette(AppPalette value) {
     _palette = value;
+    themeNotifier.value++;
     _touch();
   }
 
@@ -568,6 +575,7 @@ class TasbihAppState extends ChangeNotifier {
       _persistTimer?.cancel();
       unawaited(_persist());
     }
+    themeNotifier.dispose();
     unawaited(_feedbackPlayer?.dispose() ?? Future<void>.value());
     super.dispose();
   }

@@ -19,9 +19,9 @@ class TerraTasbihApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScope(
       notifier: state,
-      child: AnimatedBuilder(
-        animation: state,
-        builder: (context, _) {
+      child: ValueListenableBuilder<int>(
+        valueListenable: state.themeNotifier,
+        builder: (context, _, __) {
           return MaterialApp(
             title: 'Terra Tasbih',
             debugShowCheckedModeBanner: false,
