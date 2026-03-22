@@ -1,4 +1,3 @@
-## 2024-03-22 - Debouncing SharedPreferences persist
-
-**Learning:** SharedPreferences `setString` involves disk I/O and JSON encoding. In a counter app where rapid tapping is common, running this synchronously or frequently on every increment can cause severe frame drops and overhead.
-**Action:** Always debounce state persistence logic that triggers on rapid user actions (like a tap counter). Add a timer to batch the writes, and importantly, ensure that `dispose()` flushes any pending writes if the timer is still active so data is not lost on sudden app exit or screen unmount.
+## 2024-05-24 - Expensive state reads at the app root and uncached platform calls
+**Learning:** In Flutter, calling platform channels like `Vibration.hasVibrator()` on frequent user interactions (like a tap counter) can block the main thread and introduce noticeable delay. Additionally, placing an `InheritedNotifier` (`AppScope.of(context)`) listener at the root of a complex widget tree (like `MainShell` containing a `PageView` of screens) forces the entire tree to rebuild on every state change, destroying performance.
+**Action:** Always cache the results of expensive platform calls if they are unlikely to change during the app's lifecycle. Push state listeners down the widget tree as far as possible, only reading state in the widgets that actually need to react to changes.

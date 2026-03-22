@@ -34,9 +34,6 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final app = AppScope.of(context);
-    final strings = app.strings;
-
     return Scaffold(
       extendBody: true,
       body: PageView(
@@ -57,7 +54,6 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: _TerraBottomNavigationBar(
         currentIndex: _currentIndex,
-        strings: strings,
         onTap: _selectIndex,
       ),
     );
@@ -111,17 +107,17 @@ class _MainShellState extends State<MainShell> {
 class _TerraBottomNavigationBar extends StatelessWidget {
   const _TerraBottomNavigationBar({
     required this.currentIndex,
-    required this.strings,
     required this.onTap,
   });
 
   final int currentIndex;
-  final AppStrings strings;
   final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final strings = AppScope.of(context).strings;
+
     final items = [
       _NavItemData(
         icon: Symbols.fingerprint,

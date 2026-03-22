@@ -69,6 +69,7 @@ class TasbihAppState extends ChangeNotifier {
   bool _soundEnabled = false;
   bool _hapticsEnabled = true;
   bool _darkModeEnabled = false;
+  bool? _hasVibrator;
   double _textScale = 1.0;
   AppLanguage _language = AppLanguage.english;
   AppPalette _palette = AppPalette.terra;
@@ -459,7 +460,8 @@ class TasbihAppState extends ChangeNotifier {
 
   Future<void> _triggerHaptics() async {
     try {
-      if (!kIsWeb && await Vibration.hasVibrator() == true) {
+      _hasVibrator ??= await Vibration.hasVibrator();
+      if (!kIsWeb && _hasVibrator == true) {
         await Vibration.vibrate(duration: 22, amplitude: 96);
         return;
       }
