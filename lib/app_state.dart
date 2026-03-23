@@ -16,6 +16,8 @@ class TasbihAppState extends ChangeNotifier {
 
   static const _prefsKey = 'terra_tasbih_state_v3';
 
+  Timer? _persistTimer;
+
   final List<DhikrDefinition> _builtInDhikrs = const [
     DhikrDefinition(
       id: 'subhanallah',
@@ -67,11 +69,15 @@ class TasbihAppState extends ChangeNotifier {
   bool _soundEnabled = false;
   bool _hapticsEnabled = true;
   bool _darkModeEnabled = false;
+  bool? _hasVibrator;
   double _textScale = 1.0;
   AppLanguage _language = AppLanguage.english;
   AppPalette _palette = AppPalette.terra;
   DateTime? _currentSessionStartedAt;
   AudioPlayer? _feedbackPlayer;
+
+  /// Notifies listeners only when theme/locale properties change to prevent full app rebuilds
+  final ValueNotifier<int> themeNotifier = ValueNotifier<int>(0);
 
   static Future<TasbihAppState> load() async {
     final state = TasbihAppState._();
@@ -296,7 +302,7 @@ class TasbihAppState extends ChangeNotifier {
       notifyListeners();
     }
 
-    unawaited(_persist());
+    _schedulePersist();
   }
 
   void resetCurrentSession() {
@@ -377,21 +383,25 @@ class TasbihAppState extends ChangeNotifier {
 
   void setDarkModeEnabled(bool value) {
     _darkModeEnabled = value;
+    themeNotifier.value++;
     _touch();
   }
 
   void setTextScale(double value) {
     _textScale = value.clamp(0.9, 1.3);
+    themeNotifier.value++;
     _touch();
   }
 
   void setLanguage(AppLanguage value) {
     _language = value;
+    themeNotifier.value++;
     _touch();
   }
 
   void setPalette(AppPalette value) {
     _palette = value;
+    themeNotifier.value++;
     _touch();
   }
 
@@ -457,7 +467,8 @@ class TasbihAppState extends ChangeNotifier {
 
   Future<void> _triggerHaptics() async {
     try {
-      if (!kIsWeb && await Vibration.hasVibrator() == true) {
+      _hasVibrator ??= await Vibration.hasVibrator();
+      if (!kIsWeb && _hasVibrator == true) {
         await Vibration.vibrate(duration: 22, amplitude: 96);
         return;
       }
@@ -523,7 +534,15 @@ class TasbihAppState extends ChangeNotifier {
 
   void _touch() {
     notifyListeners();
-    unawaited(_persist());
+    _schedulePersist();
+  }
+
+  // Debounce disk writes to prevent frame drops during rapid tapping
+  void _schedulePersist() {
+    _persistTimer?.cancel();
+    _persistTimer = Timer(const Duration(milliseconds: 500), () {
+      unawaited(_persist());
+    });
   }
 
   Future<void> _persist() async {
@@ -552,6 +571,11 @@ class TasbihAppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_persistTimer?.isActive ?? false) {
+      _persistTimer?.cancel();
+      unawaited(_persist());
+    }
+    themeNotifier.dispose();
     unawaited(_feedbackPlayer?.dispose() ?? Future<void>.value());
     super.dispose();
   }

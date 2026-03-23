@@ -31,14 +31,15 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton>
     super.initState();
     _splashRadius = _generateRadius();
     _settleRadius = _generateRadius();
-    _morphController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 680),
-    )..addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _morphController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 680),
+        )..addListener(() {
+          if (mounted) {
+            setState(() {});
+          }
+        });
   }
 
   @override

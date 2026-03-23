@@ -99,7 +99,10 @@ class _CounterScreenState extends State<CounterScreen> {
                                         top: _expanded ? 0 : (dense ? 0 : 4),
                                       ),
                                       child: SizedBox(
-                                        height: math.max(heroRegionHeight, 118.0),
+                                        height: math.max(
+                                          heroRegionHeight,
+                                          118.0,
+                                        ),
                                         child: _CounterHero(
                                           app: app,
                                           strings: strings,
@@ -140,7 +143,9 @@ class _CounterScreenState extends State<CounterScreen> {
                                     child: Align(
                                       alignment: Alignment.topCenter,
                                       child: Padding(
-                                        padding: EdgeInsets.only(top: statusGap),
+                                        padding: EdgeInsets.only(
+                                          top: statusGap,
+                                        ),
                                         child: SizedBox(
                                           height: statusHeight,
                                           child: _TodayStatusPill(
@@ -581,8 +586,8 @@ class _CounterHero extends StatelessWidget {
         final width = constraints.maxWidth;
         final ultraCompactHero = availableHeight < 130;
         final compactHero = availableHeight < 190;
-        final smallViewportHero = !expanded &&
-            (availableHeight < 280 || width < 360);
+        final smallViewportHero =
+            !expanded && (availableHeight < 280 || width < 360);
         final topGap = ultraCompactHero
             ? 0.0
             : compactHero
@@ -711,10 +716,7 @@ class _CounterHero extends StatelessWidget {
                               onTap: onTap,
                               expanded: expanded,
                               size: buttonSize
-                                  .clamp(
-                                    ultraCompactHero ? 42.0 : 64.0,
-                                    300.0,
-                                  )
+                                  .clamp(ultraCompactHero ? 42.0 : 64.0, 300.0)
                                   .toDouble(),
                             ),
                           ],
