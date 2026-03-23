@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_strings.dart';
+import 'feedback_controller.dart';
 import 'theme.dart';
 
 class TasbihAppState extends ChangeNotifier {
@@ -72,16 +70,11 @@ class TasbihAppState extends ChangeNotifier {
   bool _soundEnabled = false;
   bool _hapticsEnabled = true;
   bool _darkModeEnabled = false;
-  bool _hapticInFlight = false;
-  bool _soundInFlight = false;
-  int _feedbackEpoch = 0;
-  DateTime? _lastHapticAt;
-  DateTime? _lastSoundAt;
   double _textScale = 1.0;
   AppLanguage _language = AppLanguage.english;
   AppPalette _palette = AppPalette.terra;
   DateTime? _currentSessionStartedAt;
-  AudioPlayer? _feedbackPlayer;
+  final FeedbackController _feedbackController = FeedbackController();
 
   /// Notifies listeners only when theme/locale properties change to prevent full app rebuilds
   final ValueNotifier<int> themeNotifier = ValueNotifier<int>(0);
@@ -149,6 +142,8 @@ class TasbihAppState extends ChangeNotifier {
       state._currentSessionCompleted = false;
       state._currentSessionStartedAt = null;
     }
+
+    await state._feedbackController.warmup();
 
     return state;
   }
@@ -302,8 +297,10 @@ class TasbihAppState extends ChangeNotifier {
     _currentSessionStartedAt ??= DateTime.now();
     _currentCount += 1;
     notifyListeners();
-    final feedbackEpoch = ++_feedbackEpoch;
-    unawaited(_triggerFeedback(feedbackEpoch));
+    _feedbackController.trigger(
+      soundEnabled: _soundEnabled,
+      hapticEnabled: _hapticsEnabled,
+    );
 
     final target = currentTarget;
     if (target != null && _currentCount >= target) {
@@ -321,7 +318,6 @@ class TasbihAppState extends ChangeNotifier {
       return;
     }
 
-    _feedbackEpoch++;
     if (!_currentSessionCompleted) {
       _archiveCurrentSession(goalReached: false);
     }
@@ -337,7 +333,6 @@ class TasbihAppState extends ChangeNotifier {
       return;
     }
 
-    _feedbackEpoch++;
     _currentCount -= 1;
     if (_currentCount == 0) {
       _currentSessionStartedAt = null;
@@ -350,7 +345,6 @@ class TasbihAppState extends ChangeNotifier {
       return;
     }
 
-    _feedbackEpoch++;
     if (hasLiveSession) {
       _archiveCurrentSession(goalReached: false);
     }
@@ -363,7 +357,6 @@ class TasbihAppState extends ChangeNotifier {
   }
 
   void setGoalPreset(int value) {
-    _feedbackEpoch++;
     _goalPreset = value;
 
     final target = currentTarget;
@@ -383,8 +376,7 @@ class TasbihAppState extends ChangeNotifier {
   void setSoundEnabled(bool value) {
     _soundEnabled = value;
     if (value) {
-      final feedbackEpoch = ++_feedbackEpoch;
-      unawaited(_playTapSound(feedbackEpoch));
+      unawaited(_feedbackController.previewSound());
     }
     _touch();
   }
@@ -392,8 +384,7 @@ class TasbihAppState extends ChangeNotifier {
   void setHapticsEnabled(bool value) {
     _hapticsEnabled = value;
     if (value) {
-      final feedbackEpoch = ++_feedbackEpoch;
-      unawaited(_triggerHaptics(feedbackEpoch));
+      unawaited(_feedbackController.previewHaptic());
     }
     _touch();
   }
@@ -473,84 +464,6 @@ class TasbihAppState extends ChangeNotifier {
     return allDhikrs
         .firstWhere((item) => item.id == dhikrId, orElse: () => currentDhikr)
         .title;
-  }
-
-  Future<void> _triggerFeedback(int epoch) async {
-    if (_hapticsEnabled) {
-      unawaited(_triggerHaptics(epoch));
-    }
-    if (_soundEnabled) {
-      unawaited(_playTapSound(epoch));
-    }
-  }
-
-  Future<void> _triggerHaptics(int epoch) async {
-    if (epoch != _feedbackEpoch) return;
-    final now = DateTime.now();
-    if (_lastHapticAt != null &&
-        now.difference(_lastHapticAt!) < const Duration(milliseconds: 48)) {
-      return;
-    }
-    if (_hapticInFlight) return;
-    _hapticInFlight = true;
-    _lastHapticAt = now;
-    try {
-      if (epoch != _feedbackEpoch) return;
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await HapticFeedback.lightImpact();
-      } else {
-        await HapticFeedback.selectionClick();
-      }
-    } catch (_) {
-      if (epoch != _feedbackEpoch) return;
-      await HapticFeedback.selectionClick();
-    } finally {
-      _hapticInFlight = false;
-    }
-  }
-
-  /// ⚡ Lazily initializes AudioPlayer with release mode set ONCE,
-  /// instead of calling setReleaseMode() on every tap (~5-15ms saved per tap).
-  Future<AudioPlayer> _getOrCreatePlayer() async {
-    if (_feedbackPlayer != null) return _feedbackPlayer!;
-    final player = AudioPlayer();
-    await player.setReleaseMode(ReleaseMode.stop);
-    _feedbackPlayer = player;
-    return player;
-  }
-
-  Future<void> _playTapSound(int epoch) async {
-    if (epoch != _feedbackEpoch) return;
-    final now = DateTime.now();
-    if (_lastSoundAt != null &&
-        now.difference(_lastSoundAt!) < const Duration(milliseconds: 56)) {
-      return;
-    }
-    if (_soundInFlight) return;
-    _soundInFlight = true;
-    _lastSoundAt = now;
-    try {
-      if (epoch != _feedbackEpoch) return;
-      if (kIsWeb) {
-        await SystemSound.play(SystemSoundType.click);
-        return;
-      }
-
-      final player = await _getOrCreatePlayer();
-      if (epoch != _feedbackEpoch) return;
-      await player.stop();
-      if (epoch != _feedbackEpoch) return;
-      await player.play(
-        AssetSource('audio/tap.wav'),
-        mode: PlayerMode.lowLatency,
-        volume: 0.55,
-      );
-    } catch (_) {
-      if (epoch != _feedbackEpoch) return;
-      await SystemSound.play(SystemSoundType.click);
-    } finally {
-      _soundInFlight = false;
-    }
   }
 
   void _archiveCurrentSession({required bool goalReached}) {
@@ -633,7 +546,7 @@ class TasbihAppState extends ChangeNotifier {
       unawaited(_persist());
     }
     themeNotifier.dispose();
-    unawaited(_feedbackPlayer?.dispose() ?? Future<void>.value());
+    unawaited(_feedbackController.dispose());
     super.dispose();
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../app_state.dart';
-import '../app_strings.dart';
 import 'add_dhikr_screen.dart';
 import 'counter_screen.dart';
 import 'dhikr_screen.dart';
