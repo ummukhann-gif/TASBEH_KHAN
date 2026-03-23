@@ -1,7 +1,7 @@
 import 'dart:math' as math;
-import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class LiquidCounterButton extends StatefulWidget {
@@ -23,64 +23,99 @@ class LiquidCounterButton extends StatefulWidget {
 class _LiquidCounterButtonState extends State<LiquidCounterButton>
     with SingleTickerProviderStateMixin {
   final math.Random _random = math.Random();
-  late final AnimationController _controller;
-  _LiquidProfile _splashProfile = _LiquidProfile.zero;
-  _LiquidProfile _settleProfile = _LiquidProfile.zero;
+  late final Ticker _ticker;
+
+  _LiquidProfile _shape = _LiquidProfile.zero;
+  _LiquidProfile _velocity = _LiquidProfile.zero;
+  double _press = 0;
+  double _pressVelocity = 0;
+  Duration? _lastElapsed;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 620),
-    );
+    _ticker = createTicker(_tick);
   }
 
   @override
   void didUpdateWidget(covariant LiquidCounterButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.expanded && !oldWidget.expanded) {
-      _controller.reset();
+      _stopMotion(reset: true);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
-  _LiquidProfile _randomProfile() {
+  void _tick(Duration elapsed) {
+    final dt = ((_lastElapsed == null
+                ? const Duration(milliseconds: 16)
+                : elapsed - _lastElapsed!)
+            .inMicroseconds /
+        1000000)
+        .clamp(0.0, 0.03);
+    _lastElapsed = elapsed;
+
+    const shapeStiffness = 32.0;
+    const shapeDamping = 10.5;
+    const pressStiffness = 40.0;
+    const pressDamping = 11.0;
+
+    final shapeAcceleration =
+        (_shape * -shapeStiffness) + (_velocity * -shapeDamping);
+    _velocity += shapeAcceleration * dt;
+    _shape += _velocity * dt;
+
+    final pressAcceleration =
+        (-_press * pressStiffness) + (-_pressVelocity * pressDamping);
+    _pressVelocity += pressAcceleration * dt;
+    _press += _pressVelocity * dt;
+
+    if (_shape.maxComponent < 0.003 &&
+        _velocity.maxComponent < 0.003 &&
+        _press.abs() < 0.002 &&
+        _pressVelocity.abs() < 0.002) {
+      _stopMotion(reset: true);
+      return;
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _stopMotion({required bool reset}) {
+    _ticker.stop();
+    _lastElapsed = null;
+    if (reset) {
+      setState(() {
+        _shape = _LiquidProfile.zero;
+        _velocity = _LiquidProfile.zero;
+        _press = 0;
+        _pressVelocity = 0;
+      });
+    }
+  }
+
+  _LiquidProfile _randomImpulse() {
     double range(double min, double max) =>
         min + _random.nextDouble() * (max - min);
 
+    final dominantRight = _random.nextBool();
+    final sidePush = range(0.32, 0.64);
+
     return _LiquidProfile(
-      top: range(-0.16, 0.48),
-      right: range(-0.10, 0.54),
-      bottom: range(-0.18, 0.42),
-      left: range(-0.10, 0.54),
-      leanX: range(-0.45, 0.45),
-      leanY: range(-0.24, 0.24),
+      top: range(-0.10, 0.14),
+      right: dominantRight ? sidePush : sidePush * 0.48,
+      bottom: range(0.08, 0.22),
+      left: dominantRight ? sidePush * 0.48 : sidePush,
+      leanX: dominantRight ? range(0.20, 0.52) : range(-0.52, -0.20),
+      leanY: range(-0.14, 0.14),
     );
-  }
-
-  _LiquidProfile _profileAt(double t) {
-    if (t == 0) {
-      return _LiquidProfile.zero;
-    }
-
-    if (t <= 0.38) {
-      final phase = Curves.easeOutCubic.transform(t / 0.38);
-      return _LiquidProfile.lerp(_LiquidProfile.zero, _splashProfile, phase);
-    }
-
-    if (t <= 0.72) {
-      final phase = Curves.easeInOutCubicEmphasized.transform((t - 0.38) / 0.34);
-      return _LiquidProfile.lerp(_splashProfile, _settleProfile, phase);
-    }
-
-    final phase = Curves.easeOutQuart.transform((t - 0.72) / 0.28);
-    return _LiquidProfile.lerp(_settleProfile, _LiquidProfile.zero, phase);
   }
 
   void _triggerMorph() {
@@ -89,10 +124,14 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton>
     }
 
     setState(() {
-      _splashProfile = _randomProfile();
-      _settleProfile = _randomProfile() * 0.42;
+      _velocity += _randomImpulse() * 8.8;
+      _pressVelocity -= 1.5;
     });
-    _controller.forward(from: 0);
+
+    if (!_ticker.isActive) {
+      _lastElapsed = null;
+      _ticker.start();
+    }
   }
 
   @override
@@ -105,43 +144,29 @@ class _LiquidCounterButtonState extends State<LiquidCounterButton>
             : widget.size;
         final width = widget.expanded ? availableWidth : widget.size;
         final height = widget.expanded ? 106.0 : widget.size;
-        final collapsedChild = _CollapsedLiquidContent(
-          size: Size(width, height),
-          scheme: scheme,
-        );
-        final expandedChild = _ExpandedTapButton(
-          width: width,
-          height: height,
-          scheme: scheme,
-        );
+        final scale = widget.expanded ? 0.986 : (1 + _press).clamp(0.92, 1.0);
 
-        return AnimatedBuilder(
-          animation: _controller,
-          child: widget.expanded ? expandedChild : collapsedChild,
-          builder: (context, child) {
-            final morph = _controller.value;
-            final scale = widget.expanded ? 0.985 : 1 - morph * 0.038;
-
-            return Semantics(
-              button: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (_) => _triggerMorph(),
-                onTap: widget.onTap,
-                child: Transform.scale(
-                  scale: scale,
-                  child: widget.expanded
-                      ? child!
-                      : _CollapsedLiquidButton(
-                          size: Size(width, height),
-                          scheme: scheme,
-                          profile: _profileAt(morph),
-                          child: child!,
-                        ),
-                ),
-              ),
-            );
-          },
+        return Semantics(
+          button: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) => _triggerMorph(),
+            onTap: widget.onTap,
+            child: Transform.scale(
+              scale: scale,
+              child: widget.expanded
+                  ? _ExpandedTapButton(
+                      width: width,
+                      height: height,
+                      scheme: scheme,
+                    )
+                  : _CollapsedLiquidButton(
+                      size: Size(width, height),
+                      scheme: scheme,
+                      profile: _shape,
+                    ),
+            ),
+          ),
         );
       },
     );
@@ -228,37 +253,11 @@ class _CollapsedLiquidButton extends StatelessWidget {
     required this.size,
     required this.scheme,
     required this.profile,
-    required this.child,
   });
 
   final Size size;
   final ColorScheme scheme;
   final _LiquidProfile profile;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: CustomPaint(
-        size: size,
-        painter: _LiquidButtonPainter(
-          scheme: scheme,
-          profile: profile,
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _CollapsedLiquidContent extends StatelessWidget {
-  const _CollapsedLiquidContent({
-    required this.size,
-    required this.scheme,
-  });
-
-  final Size size;
-  final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
@@ -271,26 +270,35 @@ class _CollapsedLiquidContent extends StatelessWidget {
       fontSize: compact ? 8.0 : 10.0,
     );
 
-    return SizedBox(
-      width: size.width,
-      height: size.height,
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Symbols.fingerprint,
-                  fill: 1,
-                  color: scheme.onPrimary,
-                  size: iconSize,
+    return RepaintBoundary(
+      child: CustomPaint(
+        size: size,
+        painter: _LiquidButtonPainter(
+          scheme: scheme,
+          profile: profile,
+        ),
+        child: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Symbols.fingerprint,
+                      fill: 1,
+                      color: scheme.onPrimary,
+                      size: iconSize,
+                    ),
+                    SizedBox(height: compact ? 4 : 8),
+                    Text('TAP', style: textStyle),
+                  ],
                 ),
-                SizedBox(height: compact ? 4 : 8),
-                Text('TAP', style: textStyle),
-              ],
+              ),
             ),
           ),
         ),
@@ -311,20 +319,20 @@ class _LiquidButtonPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final outerPath = _buildBlobPath(size, profile, inset: 0);
-    final innerPath = _buildBlobPath(size, profile * 0.6, inset: 12);
+    final innerPath = _buildBlobPath(size, profile * 0.55, inset: 12);
     final rect = Offset.zero & size;
 
     canvas.drawShadow(
       outerPath,
-      scheme.primary.withValues(alpha: 0.26),
-      22,
+      scheme.primary.withValues(alpha: 0.28),
+      24,
       false,
     );
 
     final fillPaint = Paint()
       ..shader = LinearGradient(
         colors: [
-          scheme.primary.withValues(alpha: 0.94),
+          scheme.primary.withValues(alpha: 0.95),
           scheme.primary.withValues(alpha: 0.82),
         ],
         begin: Alignment.topLeft,
@@ -334,7 +342,7 @@ class _LiquidButtonPainter extends CustomPainter {
     canvas.drawPath(outerPath, fillPaint);
 
     final innerStroke = Paint()
-      ..color = scheme.onPrimary.withValues(alpha: 0.16)
+      ..color = scheme.onPrimary.withValues(alpha: 0.17)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8;
 
@@ -352,7 +360,10 @@ class _LiquidButtonPainter extends CustomPainter {
       math.max(size.width - inset * 2, 1),
       math.max(size.height - inset * 2, 1),
     );
-    final center = rect.center;
+    final center = rect.center.translate(
+      rect.width * profile.leanX * 0.045,
+      rect.height * profile.leanY * 0.035,
+    );
     final radiusX = rect.width / 2;
     final radiusY = rect.height / 2;
     const pointCount = 10;
@@ -367,8 +378,8 @@ class _LiquidButtonPainter extends CustomPainter {
           (profile.left * math.max(-dx, 0)) +
           (profile.bottom * math.max(dy, 0)) +
           (profile.top * math.max(-dy, 0));
-      final leanBias = (profile.leanX * dx + profile.leanY * dy) * 0.16;
-      final radial = (1 + sideBias * 0.16 + leanBias).clamp(0.86, 1.18);
+      final leanBias = (profile.leanX * dx + profile.leanY * dy) * 0.18;
+      final radial = (1 + sideBias * 0.18 + leanBias).clamp(0.84, 1.22);
 
       points.add(
         Offset(
@@ -381,14 +392,12 @@ class _LiquidButtonPainter extends CustomPainter {
     final path = Path();
     final start = _midpoint(points.last, points.first);
     path.moveTo(start.dx, start.dy);
-
     for (var i = 0; i < points.length; i++) {
       final current = points[i];
       final next = points[(i + 1) % points.length];
       final midpoint = _midpoint(current, next);
       path.quadraticBezierTo(current.dx, current.dy, midpoint.dx, midpoint.dy);
     }
-
     path.close();
     return path;
   }
@@ -428,18 +437,15 @@ class _LiquidProfile {
   final double leanX;
   final double leanY;
 
-  static _LiquidProfile lerp(
-    _LiquidProfile a,
-    _LiquidProfile b,
-    double t,
-  ) {
+  _LiquidProfile operator +(Object other) {
+    final value = other as _LiquidProfile;
     return _LiquidProfile(
-      top: lerpDouble(a.top, b.top, t)!,
-      right: lerpDouble(a.right, b.right, t)!,
-      bottom: lerpDouble(a.bottom, b.bottom, t)!,
-      left: lerpDouble(a.left, b.left, t)!,
-      leanX: lerpDouble(a.leanX, b.leanX, t)!,
-      leanY: lerpDouble(a.leanY, b.leanY, t)!,
+      top: top + value.top,
+      right: right + value.right,
+      bottom: bottom + value.bottom,
+      left: left + value.left,
+      leanX: leanX + value.leanX,
+      leanY: leanY + value.leanY,
     );
   }
 
@@ -452,6 +458,17 @@ class _LiquidProfile {
       leanX: leanX * factor,
       leanY: leanY * factor,
     );
+  }
+
+  double get maxComponent {
+    return [
+      top.abs(),
+      right.abs(),
+      bottom.abs(),
+      left.abs(),
+      leanX.abs(),
+      leanY.abs(),
+    ].reduce(math.max);
   }
 
   @override
