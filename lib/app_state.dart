@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
 
 import 'app_strings.dart';
 import 'theme.dart';
@@ -73,9 +72,11 @@ class TasbihAppState extends ChangeNotifier {
   bool _soundEnabled = false;
   bool _hapticsEnabled = true;
   bool _darkModeEnabled = false;
-  bool? _hasVibrator;
-  bool _hapticInFlight = false; // ⚡ Guards against queuing multiple vibrations
-  bool _soundInFlight = false;  // ⚡ Guards against queuing multiple sounds
+  bool _hapticInFlight = false;
+  bool _soundInFlight = false;
+  int _feedbackEpoch = 0;
+  DateTime? _lastHapticAt;
+  DateTime? _lastSoundAt;
   double _textScale = 1.0;
   AppLanguage _language = AppLanguage.english;
   AppPalette _palette = AppPalette.terra;
@@ -301,7 +302,8 @@ class TasbihAppState extends ChangeNotifier {
     _currentSessionStartedAt ??= DateTime.now();
     _currentCount += 1;
     notifyListeners();
-    _triggerFeedback();
+    final feedbackEpoch = ++_feedbackEpoch;
+    unawaited(_triggerFeedback(feedbackEpoch));
 
     final target = currentTarget;
     if (target != null && _currentCount >= target) {
@@ -319,6 +321,7 @@ class TasbihAppState extends ChangeNotifier {
       return;
     }
 
+    _feedbackEpoch++;
     if (!_currentSessionCompleted) {
       _archiveCurrentSession(goalReached: false);
     }
@@ -334,6 +337,7 @@ class TasbihAppState extends ChangeNotifier {
       return;
     }
 
+    _feedbackEpoch++;
     _currentCount -= 1;
     if (_currentCount == 0) {
       _currentSessionStartedAt = null;
@@ -346,6 +350,7 @@ class TasbihAppState extends ChangeNotifier {
       return;
     }
 
+    _feedbackEpoch++;
     if (hasLiveSession) {
       _archiveCurrentSession(goalReached: false);
     }
@@ -358,6 +363,7 @@ class TasbihAppState extends ChangeNotifier {
   }
 
   void setGoalPreset(int value) {
+    _feedbackEpoch++;
     _goalPreset = value;
 
     final target = currentTarget;
@@ -377,7 +383,8 @@ class TasbihAppState extends ChangeNotifier {
   void setSoundEnabled(bool value) {
     _soundEnabled = value;
     if (value) {
-      unawaited(_playTapSound());
+      final feedbackEpoch = ++_feedbackEpoch;
+      unawaited(_playTapSound(feedbackEpoch));
     }
     _touch();
   }
@@ -385,7 +392,8 @@ class TasbihAppState extends ChangeNotifier {
   void setHapticsEnabled(bool value) {
     _hapticsEnabled = value;
     if (value) {
-      unawaited(_triggerHaptics());
+      final feedbackEpoch = ++_feedbackEpoch;
+      unawaited(_triggerHaptics(feedbackEpoch));
     }
     _touch();
   }
@@ -467,32 +475,38 @@ class TasbihAppState extends ChangeNotifier {
         .title;
   }
 
-  Future<void> _triggerFeedback() async {
+  Future<void> _triggerFeedback(int epoch) async {
     if (_hapticsEnabled) {
-      unawaited(_triggerHaptics());
+      unawaited(_triggerHaptics(epoch));
     }
     if (_soundEnabled) {
-      unawaited(_playTapSound());
+      unawaited(_playTapSound(epoch));
     }
   }
 
-  /// ⚡ Guarded: skips if a previous vibration call is still in-flight,
-  /// preventing unbounded queue buildup during rapid tapping.
-  Future<void> _triggerHaptics() async {
+  Future<void> _triggerHaptics(int epoch) async {
+    if (epoch != _feedbackEpoch) return;
+    final now = DateTime.now();
+    if (_lastHapticAt != null &&
+        now.difference(_lastHapticAt!) < const Duration(milliseconds: 48)) {
+      return;
+    }
     if (_hapticInFlight) return;
     _hapticInFlight = true;
+    _lastHapticAt = now;
     try {
-      _hasVibrator ??= await Vibration.hasVibrator();
-      if (!kIsWeb && _hasVibrator == true) {
-        await Vibration.vibrate(duration: 22, amplitude: 96);
-        return;
+      if (epoch != _feedbackEpoch) return;
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        await HapticFeedback.lightImpact();
+      } else {
+        await HapticFeedback.selectionClick();
       }
     } catch (_) {
+      if (epoch != _feedbackEpoch) return;
+      await HapticFeedback.selectionClick();
     } finally {
       _hapticInFlight = false;
     }
-
-    await HapticFeedback.selectionClick();
   }
 
   /// ⚡ Lazily initializes AudioPlayer with release mode set ONCE,
@@ -505,24 +519,34 @@ class TasbihAppState extends ChangeNotifier {
     return player;
   }
 
-  /// ⚡ Guarded: skips if a previous sound is still playing,
-  /// preventing stacked audio calls from flooding the platform channel.
-  Future<void> _playTapSound() async {
+  Future<void> _playTapSound(int epoch) async {
+    if (epoch != _feedbackEpoch) return;
+    final now = DateTime.now();
+    if (_lastSoundAt != null &&
+        now.difference(_lastSoundAt!) < const Duration(milliseconds: 56)) {
+      return;
+    }
     if (_soundInFlight) return;
     _soundInFlight = true;
+    _lastSoundAt = now;
     try {
+      if (epoch != _feedbackEpoch) return;
       if (kIsWeb) {
         await SystemSound.play(SystemSoundType.click);
         return;
       }
 
       final player = await _getOrCreatePlayer();
+      if (epoch != _feedbackEpoch) return;
+      await player.stop();
+      if (epoch != _feedbackEpoch) return;
       await player.play(
         AssetSource('audio/tap.wav'),
         mode: PlayerMode.lowLatency,
-        volume: 0.65,
+        volume: 0.55,
       );
     } catch (_) {
+      if (epoch != _feedbackEpoch) return;
       await SystemSound.play(SystemSoundType.click);
     } finally {
       _soundInFlight = false;
