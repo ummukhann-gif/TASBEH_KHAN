@@ -643,22 +643,6 @@ class _CounterHero extends StatelessWidget {
               )
             : math.min(width * 0.8, math.min(availableHeight * 0.64, 264.0));
         final buttonSize = math.min(idealButtonSize, maxButtonByHeight);
-        final ringSize = expanded
-            ? buttonSize
-            : ultraCompactHero
-            ? math.min(
-                buttonSize * 1.08,
-                math.min(availableHeight * 0.74, width * 0.62),
-              )
-            : smallViewportHero
-            ? math.min(
-                buttonSize * 1.18,
-                math.min(availableHeight * 0.9, width * 0.78),
-              )
-            : math.min(
-                buttonSize * 1.32,
-                math.min(availableHeight * 0.96, width * 0.9),
-              );
         final numberStyle =
             (expanded
                     ? theme.textTheme.displaySmall
@@ -688,69 +672,54 @@ class _CounterHero extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Stack(
-                      alignment: Alignment.center,
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        AnimatedOpacity(
-                          duration: const Duration(milliseconds: 400),
-                          opacity: expanded ? 0 : 0.42,
-                          child: _RingBackdrop(
-                            progress: app.progress,
-                            size: ringSize.clamp(82.0, 340.0).toDouble(),
-                          ),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 420),
+                          curve: Curves.easeOutCubic,
+                          style: numberStyle ?? const TextStyle(),
+                          child: Text('${app.currentCount}'),
                         ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 420),
-                              curve: Curves.easeOutCubic,
-                              style: numberStyle ?? const TextStyle(),
-                              child: Text('${app.currentCount}'),
-                            ),
-                            SizedBox(height: topGap),
-                            _TargetPill(
-                              count: app.currentCount,
-                              targetLabel: app.currentTargetLabel,
-                              dense:
-                                  ultraCompactHero ||
-                                  compactHero ||
-                                  smallViewportHero,
-                              onTap: onTargetTap,
-                            ),
-                            SizedBox(height: buttonGap),
-                            LiquidButton(
-                              onTap: onTap,
-                              size: buttonSize
-                                  .clamp(ultraCompactHero ? 42.0 : 64.0, 300.0)
-                                  .toDouble(),
-                              color: scheme.primary,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 14,
+                        SizedBox(height: topGap),
+                        _TargetPill(
+                          count: app.currentCount,
+                          targetLabel: app.currentTargetLabel,
+                          dense:
+                              ultraCompactHero ||
+                              compactHero ||
+                              smallViewportHero,
+                          onTap: onTargetTap,
+                        ),
+                        SizedBox(height: buttonGap),
+                        LiquidButton(
+                          onTap: onTap,
+                          size: buttonSize
+                              .clamp(ultraCompactHero ? 42.0 : 64.0, 300.0)
+                              .toDouble(),
+                          color: scheme.primary,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 14,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Symbols.fingerprint,
+                                    fill: 1,
+                                    color: scheme.onPrimary,
+                                    size: iconSize,
                                   ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Symbols.fingerprint,
-                                        fill: 1,
-                                        color: scheme.onPrimary,
-                                        size: iconSize,
-                                      ),
-                                      SizedBox(
-                                        height: buttonSize < 110 ? 4 : 8,
-                                      ),
-                                      Text('TAP', style: tapLabelStyle),
-                                    ],
-                                  ),
-                                ),
+                                  SizedBox(height: buttonSize < 110 ? 4 : 8),
+                                  Text('TAP', style: tapLabelStyle),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
@@ -762,83 +731,6 @@ class _CounterHero extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-class _RingBackdrop extends StatelessWidget {
-  const _RingBackdrop({required this.progress, required this.size});
-
-  final double progress;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: progress),
-      duration: const Duration(milliseconds: 520),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, _) {
-        return CustomPaint(
-          size: Size.square(size),
-          painter: _RingPainter(
-            progress: value,
-            activeColor: scheme.primary.withValues(alpha: 0.2),
-            baseColor: scheme.primary.withValues(alpha: 0.08),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({
-    required this.progress,
-    required this.activeColor,
-    required this.baseColor,
-  });
-
-  final double progress;
-  final Color activeColor;
-  final Color baseColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final outer = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..color = baseColor;
-    final inner = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = baseColor.withValues(alpha: 0.55);
-    final progressPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round
-      ..color = activeColor;
-
-    canvas.drawCircle(center, size.width * 0.38, outer);
-    canvas.drawCircle(center, size.width * 0.33, inner);
-
-    final rect = Rect.fromCircle(center: center, radius: size.width * 0.38);
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      progress * math.pi * 2,
-      false,
-      progressPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.activeColor != activeColor ||
-        oldDelegate.baseColor != baseColor;
   }
 }
 
