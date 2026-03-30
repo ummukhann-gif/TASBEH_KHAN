@@ -588,13 +588,6 @@ class _CounterHero extends StatelessWidget {
         final compactHero = availableHeight < 190;
         final smallViewportHero =
             !expanded && (availableHeight < 280 || width < 360);
-        final topGap = ultraCompactHero
-            ? 0.0
-            : compactHero
-            ? 2.0
-            : smallViewportHero
-            ? 4.0
-            : (expanded ? 6.0 : 8.0);
         final buttonGap = ultraCompactHero
             ? 4.0
             : compactHero
@@ -602,15 +595,6 @@ class _CounterHero extends StatelessWidget {
             : smallViewportHero
             ? 10.0
             : (expanded ? 14.0 : 18.0);
-        final numberHeight = expanded
-            ? math.min(availableHeight * 0.18, 54.0)
-            : ultraCompactHero
-            ? math.min(availableHeight * 0.12, 28.0)
-            : compactHero
-            ? math.min(availableHeight * 0.15, 38.0)
-            : smallViewportHero
-            ? math.min(availableHeight * 0.14, 34.0)
-            : math.min(availableHeight * 0.2, 82.0);
         final targetHeight = ultraCompactHero
             ? 22.0
             : compactHero
@@ -620,9 +604,7 @@ class _CounterHero extends StatelessWidget {
             : 34.0;
         final maxButtonByHeight = math.max(
           availableHeight -
-              numberHeight -
               targetHeight -
-              topGap -
               buttonGap -
               (ultraCompactHero ? 0 : (smallViewportHero ? 2 : 6)),
           ultraCompactHero ? 42.0 : 64.0,
@@ -659,14 +641,17 @@ class _CounterHero extends StatelessWidget {
                 buttonSize * 1.32,
                 math.min(availableHeight * 0.96, width * 0.9),
               );
-        final numberStyle =
+        final countStyle =
             (expanded
                     ? theme.textTheme.displaySmall
                     : theme.textTheme.displayMedium)
                 ?.copyWith(
-                  color: scheme.primary,
+                  color: scheme.onPrimary,
                   fontWeight: FontWeight.w800,
-                  fontSize: numberHeight,
+                  fontSize: (buttonSize * (expanded ? 0.28 : 0.3)).clamp(
+                    24.0,
+                    84.0,
+                  ),
                 );
 
         return AnimatedContainer(
@@ -695,13 +680,6 @@ class _CounterHero extends StatelessWidget {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 420),
-                              curve: Curves.easeOutCubic,
-                              style: numberStyle ?? const TextStyle(),
-                              child: Text('${app.currentCount}'),
-                            ),
-                            SizedBox(height: topGap),
                             _TargetPill(
                               count: app.currentCount,
                               targetLabel: app.currentTargetLabel,
@@ -712,12 +690,18 @@ class _CounterHero extends StatelessWidget {
                               onTap: onTargetTap,
                             ),
                             SizedBox(height: buttonGap),
-                            LiquidCounterButton(
+                            LiquidButton(
                               onTap: onTap,
-                              expanded: expanded,
                               size: buttonSize
                                   .clamp(ultraCompactHero ? 42.0 : 64.0, 300.0)
                                   .toDouble(),
+                              color: scheme.primary,
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 420),
+                                curve: Curves.easeOutCubic,
+                                style: countStyle ?? const TextStyle(),
+                                child: Text('${app.currentCount}'),
+                              ),
                             ),
                           ],
                         ),
