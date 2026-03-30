@@ -16,40 +16,31 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  late final PageController _controller;
   int _currentIndex = 0;
+  final Set<int> _visitedIndexes = {0};
+  final Map<int, Widget> _screenCache = {};
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: PageView(
-        controller: _controller,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          const CounterScreen(),
-          DhikrScreen(
-            onOpenCounter: () => _selectIndex(0),
-            onOpenAdd: _openAddDhikr,
-          ),
-          StatsScreen(
-            onOpenCounter: () => _selectIndex(0),
-            onOpenDhikr: () => _selectIndex(1),
-          ),
-          const SettingsScreen(),
-        ],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: List.generate(4, (index) {
+          if (!_visitedIndexes.contains(index)) {
+            return const SizedBox.shrink();
+          }
+
+          return TickerMode(
+            enabled: _currentIndex == index,
+            child: RepaintBoundary(child: _screenFor(index)),
+          );
+        }),
       ),
       bottomNavigationBar: _TerraBottomNavigationBar(
         currentIndex: _currentIndex,
@@ -98,8 +89,33 @@ class _MainShellState extends State<MainShell> {
       return;
     }
 
-    setState(() => _currentIndex = index);
-    _controller.jumpToPage(index);
+    setState(() {
+      _currentIndex = index;
+      _visitedIndexes.add(index);
+    });
+  }
+
+  Widget _screenFor(int index) {
+    return _screenCache.putIfAbsent(index, () {
+      switch (index) {
+        case 0:
+          return const CounterScreen();
+        case 1:
+          return DhikrScreen(
+            onOpenCounter: () => _selectIndex(0),
+            onOpenAdd: _openAddDhikr,
+          );
+        case 2:
+          return StatsScreen(
+            onOpenCounter: () => _selectIndex(0),
+            onOpenDhikr: () => _selectIndex(1),
+          );
+        case 3:
+          return const SettingsScreen();
+        default:
+          return const SizedBox.shrink();
+      }
+    });
   }
 }
 

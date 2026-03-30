@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,12 +9,15 @@ import 'app_strings.dart';
 import 'feedback_controller.dart';
 import 'theme.dart';
 
+String _encodePersistedState(Map<String, dynamic> payload) => jsonEncode(payload);
+
 class TasbihAppState extends ChangeNotifier {
   TasbihAppState._();
 
   static const _prefsKey = 'terra_tasbih_state_v3';
 
   Timer? _persistTimer;
+  SharedPreferences? _prefs;
 
   final List<DhikrDefinition> _builtInDhikrs = const [
     DhikrDefinition(
@@ -82,6 +86,7 @@ class TasbihAppState extends ChangeNotifier {
   static Future<TasbihAppState> load() async {
     final state = TasbihAppState._();
     final prefs = await SharedPreferences.getInstance();
+    state._prefs = prefs;
     final raw = prefs.getString(_prefsKey);
 
     if (raw == null) {
@@ -510,32 +515,34 @@ class TasbihAppState extends ChangeNotifier {
   // Debounce disk writes to prevent frame drops during rapid tapping
   void _schedulePersist() {
     _persistTimer?.cancel();
-    _persistTimer = Timer(const Duration(milliseconds: 500), () {
+    _persistTimer = Timer(const Duration(milliseconds: 900), () {
       unawaited(_persist());
     });
   }
 
   Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ??= await SharedPreferences.getInstance();
+    final payload = {
+      'customDhikrs': _customDhikrs.map((item) => item.toJson()).toList(),
+      'sessions': _sessions.map((item) => item.toJson()).toList(),
+      'currentDhikrId': _currentDhikrId,
+      'currentCount': _currentCount,
+      'goalPreset': _goalPreset,
+      'currentSessionCompleted': _currentSessionCompleted,
+      'soundEnabled': _soundEnabled,
+      'hapticsEnabled': _hapticsEnabled,
+      'darkModeEnabled': _darkModeEnabled,
+      'textScale': _textScale,
+      'language': _language.name,
+      'palette': _palette.name,
+      'currentSessionStartedAt': _currentSessionStartedAt
+          ?.toUtc()
+          .toIso8601String(),
+    };
+    final encoded = await compute(_encodePersistedState, payload);
     await prefs.setString(
       _prefsKey,
-      jsonEncode({
-        'customDhikrs': _customDhikrs.map((item) => item.toJson()).toList(),
-        'sessions': _sessions.map((item) => item.toJson()).toList(),
-        'currentDhikrId': _currentDhikrId,
-        'currentCount': _currentCount,
-        'goalPreset': _goalPreset,
-        'currentSessionCompleted': _currentSessionCompleted,
-        'soundEnabled': _soundEnabled,
-        'hapticsEnabled': _hapticsEnabled,
-        'darkModeEnabled': _darkModeEnabled,
-        'textScale': _textScale,
-        'language': _language.name,
-        'palette': _palette.name,
-        'currentSessionStartedAt': _currentSessionStartedAt
-            ?.toUtc()
-            .toIso8601String(),
-      }),
+      encoded,
     );
   }
 
