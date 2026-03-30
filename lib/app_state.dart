@@ -90,6 +90,7 @@ class TasbihAppState extends ChangeNotifier {
     final raw = prefs.getString(_prefsKey);
 
     if (raw == null) {
+      unawaited(state._feedbackController.warmup());
       return state;
     }
 
@@ -148,7 +149,7 @@ class TasbihAppState extends ChangeNotifier {
       state._currentSessionStartedAt = null;
     }
 
-    await state._feedbackController.warmup();
+    unawaited(state._feedbackController.warmup());
 
     return state;
   }

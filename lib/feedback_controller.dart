@@ -3,23 +3,27 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 
 class FeedbackController {
-  AudioPlayer? _player;
-  bool _hapticInFlight = false;
-  bool _soundInFlight = false;
+  static const _minHapticGap = Duration(milliseconds: 45);
+  static const _minSoundGap = Duration(milliseconds: 60);
+
+  AudioPool? _audioPool;
+  Future<void>? _warmupFuture;
+  Future<bool>? _hasVibratorFuture;
+  Future<bool>? _hasAmplitudeControlFuture;
+  Future<bool>? _hasCustomVibrationSupportFuture;
   DateTime? _lastHapticAt;
   DateTime? _lastSoundAt;
 
   Future<void> warmup() async {
-    if (kIsWeb || _player != null) {
+    if (kIsWeb) {
       return;
     }
 
-    final player = AudioPlayer();
-    await player.setPlayerMode(PlayerMode.lowLatency);
-    await player.setReleaseMode(ReleaseMode.stop);
-    _player = player;
+    _warmupFuture ??= _warmupInternal();
+    await _warmupFuture;
   }
 
   void trigger({
@@ -38,42 +42,72 @@ class FeedbackController {
 
   Future<void> previewHaptic() => _emitHaptic();
 
-  Future<void> _emitHaptic() async {
-    final now = DateTime.now();
-    if (_hapticInFlight) {
-      return;
-    }
-    if (_lastHapticAt != null &&
-        now.difference(_lastHapticAt!) < const Duration(milliseconds: 55)) {
+  Future<void> _warmupInternal() async {
+    _hasVibratorFuture = Vibration.hasVibrator();
+    _hasAmplitudeControlFuture = Vibration.hasAmplitudeControl();
+    _hasCustomVibrationSupportFuture = Vibration.hasCustomVibrationsSupport();
+
+    if (_audioPool != null) {
       return;
     }
 
-    _hapticInFlight = true;
+    _audioPool = await AudioPool.createFromAsset(
+      path: 'audio/tap.wav',
+      minPlayers: 1,
+      maxPlayers: 2,
+      playerMode: PlayerMode.lowLatency,
+    );
+  }
+
+  Future<void> _emitHaptic() async {
+    final now = DateTime.now();
+    if (_lastHapticAt != null &&
+        now.difference(_lastHapticAt!) < _minHapticGap) {
+      return;
+    }
+
     _lastHapticAt = now;
     try {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final hasVibrator =
+            await (_hasVibratorFuture ??= Vibration.hasVibrator());
+        if (!hasVibrator) {
+          return;
+        }
+
+        final hasCustomSupport = await (_hasCustomVibrationSupportFuture ??=
+            Vibration.hasCustomVibrationsSupport());
+        if (!hasCustomSupport) {
+          await Vibration.vibrate();
+          return;
+        }
+
+        final hasAmplitudeControl = await (_hasAmplitudeControlFuture ??=
+            Vibration.hasAmplitudeControl());
+        await Vibration.vibrate(
+          duration: 22,
+          amplitude: hasAmplitudeControl ? 96 : -1,
+        );
+        return;
+      }
+
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await HapticFeedback.lightImpact();
+        await HapticFeedback.mediumImpact();
       } else {
         await HapticFeedback.selectionClick();
       }
     } catch (_) {
       // Ignore feedback failures. UI state should never depend on them.
-    } finally {
-      _hapticInFlight = false;
     }
   }
 
   Future<void> _emitSound() async {
     final now = DateTime.now();
-    if (_soundInFlight) {
-      return;
-    }
     if (_lastSoundAt != null &&
-        now.difference(_lastSoundAt!) < const Duration(milliseconds: 70)) {
+        now.difference(_lastSoundAt!) < _minSoundGap) {
       return;
     }
 
-    _soundInFlight = true;
     _lastSoundAt = now;
     try {
       if (kIsWeb) {
@@ -82,25 +116,17 @@ class FeedbackController {
       }
 
       await warmup();
-      final player = _player;
-      if (player == null) {
-        return;
-      }
-
-      await player.stop();
-      await player.play(
-        AssetSource('audio/tap.wav'),
-        mode: PlayerMode.lowLatency,
-        volume: 0.55,
-      );
+      await _audioPool?.start(volume: 0.8);
     } catch (_) {
-      // Ignore feedback failures. UI state should never depend on them.
-    } finally {
-      _soundInFlight = false;
+      try {
+        await SystemSound.play(SystemSoundType.click);
+      } catch (_) {
+        // Ignore feedback failures. UI state should never depend on them.
+      }
     }
   }
 
   Future<void> dispose() async {
-    await _player?.dispose();
+    await _audioPool?.dispose();
   }
 }
